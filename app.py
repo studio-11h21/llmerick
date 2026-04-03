@@ -162,10 +162,16 @@ def scrape_with_playwright(url):
     """Fallback for JS-heavy sites (SPAs, React, Vue, Shopify, etc.)."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-gpu", "--single-process"]
-        )
+    browser = p.chromium.launch(
+    headless=True,
+    args=[
+        "--no-sandbox",
+        "--disable-gpu",
+        "--single-process",
+        "--disable-dev-shm-usage",
+        "--disable-setuid-sandbox",
+    ]
+)
         context = browser.new_context(user_agent=HEADERS["User-Agent"])
         page = context.new_page()
         page.goto(url, wait_until="domcontentloaded", timeout=60000)
