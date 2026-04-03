@@ -12,9 +12,26 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.5",
 }
 
-# If httpx returns fewer than this many content elements, assume JS rendering
-# is needed and fall back to Playwright automatically.
-MIN_CONTENT_ELEMENTS = 3
+# A page is considered "thin" (JS shell) if the total visible text content
+# across all real elements is below this character count.
+MIN_CONTENT_CHARS = 400
+
+
+def get_image_src(tag):
+    """
+    Returns the best available image URL from a tag.
+    Checks real src first, then common lazy-load attributes used by
+    Shopify, WordPress, and other CMS platforms.
+    """
+    for attr in ['src', 'data-src', 'data-lazy-src', 'data-original', 'data-srcset']:
+        val = tag.get(attr, '').strip()
+        # data-srcset can contain "url 1x, url 2x" — take the first URL
+        if val and attr == 'data-srcset':
+            val = val.split(',')[0].split(' ')[0].strip()
+        # Skip base64 placeholders and tiny 1px GIFs
+        if val and not val.startswith('data:'):
+            return val
+    return ''
 
 
 def extract_semantic_data(html_content, url):
@@ -35,7 +52,6 @@ def extract_semantic_data(html_content, url):
     markdown_lines = []
     human_lines = []
 
-    # Always include title and meta at the top
     if title_text:
         elements_data.append({"type": "TITLE", "text": title_text})
         markdown_lines.append(f"<TITLE>{title_text}</TITLE>")
@@ -87,18 +103,19 @@ def extract_semantic_data(html_content, url):
                 markdown_lines.append(f"<A href='{href}'>{text}</A>")
                 human_lines.append(f"[LINK: {text}] -> {href}")
 
-    # ── Images: scan the WHOLE document, not just main_content ──────────
-    # Images are often in carousels, hero sections, or wrappers that sit
-    # outside <main>/<article>. We search the full soup after noise removal.
+    # ── Images: scan the WHOLE document ─────────────────────────────────
+    # Covers lazy-loaded images (Shopify data-src, WordPress data-lazy-src)
+    # and images outside <main>/<article> containers.
     seen_imgs = set()
     for tag in soup.find_all('img'):
         alt = tag.get('alt', '').strip()
-        src = tag.get('src', '').strip()
         title_attr = tag.get('title', '').strip()
+        src = get_image_src(tag)
 
-        # Skip images with no alt AND no title (spacers, trackers, decorative)
+        # Skip images with no descriptive text at all — no SEO value
         if not alt and not title_attr:
             continue
+
         img_key = (alt, src)
         if img_key in seen_imgs:
             continue
@@ -106,7 +123,7 @@ def extract_semantic_data(html_content, url):
 
         elements_data.append({"type": "IMG", "alt": alt, "src": src, "title": title_attr})
         markdown_lines.append(f"<IMG alt='{alt}' title='{title_attr}' src='{src}'/>")
-        human_lines.append(f"[IMAGE] Alt: {alt} | Title: {title_attr}")
+        human_lines.append(f"[IMAGE] Alt: {alt} | Title: {title_attr} | Src: {src}")
 
     return {
         "elements": elements_data,
@@ -119,15 +136,18 @@ def extract_semantic_data(html_content, url):
 
 def content_is_thin(extracted):
     """
-    Returns True if httpx got a JS shell with almost no real content.
-    We count elements excluding TITLE and META_DESC since those come
-    from <head> and are present even on empty JS shells.
+    Returns True if the page looks like an empty JS shell.
+    Measures total character count of real content (excludes TITLE/META_DESC
+    which are always present in <head> even on JS-only shells).
+    Also ignores LINK and IMG elements — a page of only nav links is still thin.
     """
-    real_elements = [
-        e for e in extracted["elements"]
-        if e["type"] not in ("TITLE", "META_DESC")
-    ]
-    return len(real_elements) < MIN_CONTENT_ELEMENTS
+    substantive_types = {"H1", "H2", "H3", "H4", "H5", "H6", "P", "LI"}
+    total_chars = sum(
+        len(e.get("text", ""))
+        for e in extracted["elements"]
+        if e["type"] in substantive_types
+    )
+    return total_chars < MIN_CONTENT_CHARS
 
 
 def scrape_with_httpx(url):
@@ -176,7 +196,7 @@ def scrape():
         extracted = extract_semantic_data(html_content, url)
         extraction_method = "httpx"
 
-        # If content looks like an empty JS shell, escalate to Playwright
+        # If content looks like a JS shell, escalate to Playwright
         if content_is_thin(extracted):
             raise ValueError("Thin content detected — retrying with Playwright")
 
