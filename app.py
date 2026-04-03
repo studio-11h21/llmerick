@@ -25,10 +25,8 @@ def get_image_src(tag):
     """
     for attr in ['src', 'data-src', 'data-lazy-src', 'data-original', 'data-srcset']:
         val = tag.get(attr, '').strip()
-        # data-srcset can contain "url 1x, url 2x" — take the first URL
         if val and attr == 'data-srcset':
             val = val.split(',')[0].split(' ')[0].strip()
-        # Skip base64 placeholders and tiny 1px GIFs
         if val and not val.startswith('data:'):
             return val
     return ''
@@ -37,14 +35,12 @@ def get_image_src(tag):
 def extract_semantic_data(html_content, url):
     soup = BeautifulSoup(html_content, 'html.parser')
 
-    # Grab title and meta before stripping anything
     title_tag = soup.find('title')
     title_text = title_tag.get_text(strip=True) if title_tag else ''
 
     meta_desc_tag = soup.find('meta', attrs={'name': 'description'})
     meta_desc_text = meta_desc_tag.get('content', '') if meta_desc_tag else ''
 
-    # Strip noise
     for element in soup(["script", "style", "noscript", "header", "footer", "nav", "iframe"]):
         element.decompose()
 
@@ -62,7 +58,6 @@ def extract_semantic_data(html_content, url):
         markdown_lines.append(f"<META_DESC>{meta_desc_text}</META_DESC>")
         human_lines.append(f"[META DESCRIPTION] {meta_desc_text}")
 
-    # Prefer main content containers to reduce nav/sidebar noise
     main_content = (
         soup.find('main') or
         soup.find('article') or
@@ -103,16 +98,12 @@ def extract_semantic_data(html_content, url):
                 markdown_lines.append(f"<A href='{href}'>{text}</A>")
                 human_lines.append(f"[LINK: {text}] -> {href}")
 
-    # ── Images: scan the WHOLE document ─────────────────────────────────
-    # Covers lazy-loaded images (Shopify data-src, WordPress data-lazy-src)
-    # and images outside <main>/<article> containers.
     seen_imgs = set()
     for tag in soup.find_all('img'):
         alt = tag.get('alt', '').strip()
         title_attr = tag.get('title', '').strip()
         src = get_image_src(tag)
 
-        # Skip images with no descriptive text at all — no SEO value
         if not alt and not title_attr:
             continue
 
@@ -137,9 +128,7 @@ def extract_semantic_data(html_content, url):
 def content_is_thin(extracted):
     """
     Returns True if the page looks like an empty JS shell.
-    Measures total character count of real content (excludes TITLE/META_DESC
-    which are always present in <head> even on JS-only shells).
-    Also ignores LINK and IMG elements — a page of only nav links is still thin.
+    Measures total character count of headings, paragraphs and list items only.
     """
     substantive_types = {"H1", "H2", "H3", "H4", "H5", "H6", "P", "LI"}
     total_chars = sum(
@@ -151,7 +140,6 @@ def content_is_thin(extracted):
 
 
 def scrape_with_httpx(url):
-    """Fast path — no browser needed. Works for most static/SSR sites."""
     with httpx.Client(headers=HEADERS, follow_redirects=True, timeout=30) as client:
         response = client.get(url)
         response.raise_for_status()
@@ -159,19 +147,18 @@ def scrape_with_httpx(url):
 
 
 def scrape_with_playwright(url):
-    """Fallback for JS-heavy sites (SPAs, React, Vue, Shopify, etc.)."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-    browser = p.chromium.launch(
-    headless=True,
-    args=[
-        "--no-sandbox",
-        "--disable-gpu",
-        "--single-process",
-        "--disable-dev-shm-usage",
-        "--disable-setuid-sandbox",
-    ]
-)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-gpu",
+                "--single-process",
+                "--disable-dev-shm-usage",
+                "--disable-setuid-sandbox",
+            ]
+        )
         context = browser.new_context(user_agent=HEADERS["User-Agent"])
         page = context.new_page()
         page.goto(url, wait_until="domcontentloaded", timeout=60000)
@@ -196,18 +183,15 @@ def scrape():
 
     extraction_method = None
 
-    # ── Try fast httpx first ─────────────────────────────────────────────
     try:
         html_content = scrape_with_httpx(url)
         extracted = extract_semantic_data(html_content, url)
         extraction_method = "httpx"
 
-        # If content looks like a JS shell, escalate to Playwright
         if content_is_thin(extracted):
             raise ValueError("Thin content detected — retrying with Playwright")
 
     except Exception:
-        # ── Playwright fallback ──────────────────────────────────────────
         try:
             html_content = scrape_with_playwright(url)
             extracted = extract_semantic_data(html_content, url)
