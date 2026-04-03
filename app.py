@@ -35,12 +35,14 @@ def get_image_src(tag):
 def extract_semantic_data(html_content, url):
     soup = BeautifulSoup(html_content, 'html.parser')
 
+    # Grab title and meta before stripping anything
     title_tag = soup.find('title')
     title_text = title_tag.get_text(strip=True) if title_tag else ''
 
     meta_desc_tag = soup.find('meta', attrs={'name': 'description'})
     meta_desc_text = meta_desc_tag.get('content', '') if meta_desc_tag else ''
 
+    # Strip noise — remove these before any content search
     for element in soup(["script", "style", "noscript", "header", "footer", "nav", "iframe"]):
         element.decompose()
 
@@ -58,30 +60,28 @@ def extract_semantic_data(html_content, url):
         markdown_lines.append(f"<META_DESC>{meta_desc_text}</META_DESC>")
         human_lines.append(f"[META DESCRIPTION] {meta_desc_text}")
 
-    main_content = (
-        soup.find('main') or
-        soup.find('article') or
-        soup.find(attrs={"role": "main"}) or
-        soup.find('body') or
-        soup
-    )
+    # Use the full body — header/footer/nav are already stripped above.
+    # This ensures we capture content in sections, articles, and divs
+    # that sit outside of <main>, which is common in CMS-built sites.
+    content_root = soup.find('body') or soup
 
     seen_texts = set()
 
-    for tag in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'a']):
+    for tag in content_root.find_all(
+        ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'a']
+    ):
         text = tag.get_text(strip=True)
 
-        if text and text in seen_texts:
+        if not text or text in seen_texts:
             continue
-        if text:
-            seen_texts.add(text)
+        seen_texts.add(text)
 
         if tag.name.startswith('h'):
             elements_data.append({"type": tag.name.upper(), "text": text})
             markdown_lines.append(f"<{tag.name.upper()}>{text}</{tag.name.upper()}>")
             human_lines.append(f"[{tag.name.upper()}] {text}")
 
-        elif tag.name == 'p' and text and len(text) > 20:
+        elif tag.name == 'p' and len(text) > 20:
             elements_data.append({"type": "P", "text": text})
             markdown_lines.append(f"<P>{text}</P>")
             human_lines.append(f"{text}\n")
@@ -91,13 +91,33 @@ def extract_semantic_data(html_content, url):
             markdown_lines.append(f"<LI>{text}</LI>")
             human_lines.append(f"  • {text}")
 
-        elif tag.name == 'a' and text:
+        elif tag.name == 'a':
             href = tag.get('href', '')
             if href and not href.startswith('javascript:') and not href.startswith('#'):
                 elements_data.append({"type": "LINK", "text": text, "href": href})
                 markdown_lines.append(f"<A href='{href}'>{text}</A>")
                 human_lines.append(f"[LINK: {text}] -> {href}")
 
+    # ── FAQ: capture questions from buttons and answers from hidden divs ─
+    # Many CMS FAQ sections use <button> for questions and hide answers
+    # with style="display:none" — BeautifulSoup reads these regardless.
+    seen_faq = set()
+    for btn in content_root.find_all('button', class_='faqitem'):
+        question_tag = btn.find(['h2', 'h3', 'h4', 'span', 'p'])
+        question = question_tag.get_text(strip=True) if question_tag else btn.get_text(strip=True)
+        if not question or question in seen_faq:
+            continue
+        seen_faq.add(question)
+
+        # Answer is usually the next sibling div with class "answer"
+        answer_div = btn.find_next_sibling('div')
+        answer = answer_div.get_text(strip=True) if answer_div else ''
+
+        elements_data.append({"type": "FAQ", "question": question, "answer": answer})
+        markdown_lines.append(f"<FAQ><Q>{question}</Q><A>{answer}</A></FAQ>")
+        human_lines.append(f"[FAQ] Q: {question}\n      A: {answer}\n")
+
+    # ── Images: scan the whole document ─────────────────────────────────
     seen_imgs = set()
     for tag in soup.find_all('img'):
         alt = tag.get('alt', '').strip()
