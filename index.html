@@ -10,6 +10,9 @@
     <meta property="og:description" content="Stop feeding bloated source code to your AI. Extract clean semantic data and prevent hallucinations.">
     <meta property="og:type" content="website">
 
+    <!-- Bright yellow favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23FFE600'/></svg>">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
 
@@ -47,8 +50,9 @@
         <!-- Donate button — right col, same row as logo, hidden until scan succeeds -->
         <div class="col-span-1 md:col-start-3 md:row-start-1 hidden" id="donateWrapper">
             <a href="https://buymeacoffee.com/alfredlor" target="_blank"
-                class="w-full h-full min-h-[4rem] bg-black text-white font-bold uppercase flex items-center justify-center text-lg hover:bg-gray-800 transition-colors px-4 text-center">
-                ☕ Buy Me a Coffee
+                class="w-full h-full min-h-[4rem] font-bold uppercase flex items-center justify-center text-lg transition-colors px-4 text-center"
+                style="background-color: #FFE600; color: #000;">
+                Buy Me a Coffee
             </a>
         </div>
 
@@ -62,7 +66,7 @@
         <!-- Intro copy -->
         <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-3">
             <p class="text-base leading-relaxed font-normal mt-2">
-                Deep crawl up to 50 pages. Strip the bloat. Export pure data.<br><br>
+                Deep crawl a webpage. Strip the bloat. Export pure data.<br><br>
                 <strong>Large Language Models hallucinate when fed raw, bloated source code.</strong>
                 LLMerick extracts a clean, semantic skeleton — giving you condensed, AI-ready data
                 to prevent hallucination and execute perfect SEO audits.
@@ -175,7 +179,7 @@
             <div class="max-w-3xl">
                 <p class="text-sm font-black uppercase mb-2">Contact & Legal</p>
                 <p class="text-xs font-medium text-gray-600 leading-relaxed">
-                    <strong>Email:</strong> <a href="mailto:hello@llmerick.com" class="hover:text-black hover:underline">hello@llmerick.com</a><br><br>
+                    <strong>Email:</strong> <a href="mailto:studio.11h21@gmail.com" class="hover:text-black hover:underline">studio.11h21@gmail.com</a><br><br>
                     <strong>Disclaimer & Terms of Use:</strong> LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. By utilizing this service, you agree to respect the Terms of Service and <code>robots.txt</code> policies of the target websites. The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.<br><br>
                     <strong>About:</strong> This application was created by visual artist and SEO tweaker, Alfred Lor. It was inspired by a desire to solve the problem of getting LLMs to ingest a holistic overview of the heading structures, copy, and internal links within a website. His work can be seen at <a href="http://www.11h21.com" target="_blank" class="font-bold hover:underline">www.11h21.com</a>.
                 </p>
@@ -209,11 +213,7 @@
     </div>
 
     <script>
-        // ─── CONFIG ───────────────────────────────────────────────────
-        // After deploying the backend to Render, paste its URL below.
-        // Example: "https://llmerick-engine.onrender.com/api/scrape"
         const API_BASE_URL = "https://llmerick-engine.onrender.com/api/scrape";
-        // ─────────────────────────────────────────────────────────────
 
         let globalScrapeData = null;
 
@@ -268,10 +268,8 @@
                     loading.classList.add('hidden');
                     results.classList.remove('hidden');
 
-                    // Reveal donate button on first successful scan
                     document.getElementById('donateWrapper').classList.remove('hidden');
 
-                    // Scroll results into view
                     results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 } else {
