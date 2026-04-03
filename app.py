@@ -14,7 +14,7 @@ HEADERS = {
 
 # A page is considered "thin" (JS shell) if the total visible text content
 # across all real elements is below this character count.
-MIN_CONTENT_CHARS = 400
+MIN_CONTENT_CHARS = 1000
 
 
 def get_image_src(tag):
