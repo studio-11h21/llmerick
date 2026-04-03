@@ -12,6 +12,10 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.5",
 }
 
+# If httpx returns fewer than this many content elements, assume JS rendering
+# is needed and fall back to Playwright automatically.
+MIN_CONTENT_ELEMENTS = 3
+
 
 def extract_semantic_data(html_content, url):
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -31,7 +35,7 @@ def extract_semantic_data(html_content, url):
     markdown_lines = []
     human_lines = []
 
-    # Always include title and meta at the top of output
+    # Always include title and meta at the top
     if title_text:
         elements_data.append({"type": "TITLE", "text": title_text})
         markdown_lines.append(f"<TITLE>{title_text}</TITLE>")
@@ -53,10 +57,9 @@ def extract_semantic_data(html_content, url):
 
     seen_texts = set()
 
-    for tag in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'img', 'a']):
+    for tag in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'a']):
         text = tag.get_text(strip=True)
 
-        # Deduplicate repeated text blocks
         if text and text in seen_texts:
             continue
         if text:
@@ -77,21 +80,33 @@ def extract_semantic_data(html_content, url):
             markdown_lines.append(f"<LI>{text}</LI>")
             human_lines.append(f"  • {text}")
 
-        elif tag.name == 'img':
-            alt = tag.get('alt', '')
-            src = tag.get('src', '')
-            title_attr = tag.get('title', '')
-            if alt or src:
-                elements_data.append({"type": "IMG", "alt": alt, "src": src, "title": title_attr})
-                markdown_lines.append(f"<IMG alt='{alt}' title='{title_attr}' src='{src}'/>")
-                human_lines.append(f"[IMAGE] Alt: {alt} | Title: {title_attr}")
-
         elif tag.name == 'a' and text:
             href = tag.get('href', '')
             if href and not href.startswith('javascript:') and not href.startswith('#'):
                 elements_data.append({"type": "LINK", "text": text, "href": href})
                 markdown_lines.append(f"<A href='{href}'>{text}</A>")
                 human_lines.append(f"[LINK: {text}] -> {href}")
+
+    # ── Images: scan the WHOLE document, not just main_content ──────────
+    # Images are often in carousels, hero sections, or wrappers that sit
+    # outside <main>/<article>. We search the full soup after noise removal.
+    seen_imgs = set()
+    for tag in soup.find_all('img'):
+        alt = tag.get('alt', '').strip()
+        src = tag.get('src', '').strip()
+        title_attr = tag.get('title', '').strip()
+
+        # Skip images with no alt AND no title (spacers, trackers, decorative)
+        if not alt and not title_attr:
+            continue
+        img_key = (alt, src)
+        if img_key in seen_imgs:
+            continue
+        seen_imgs.add(img_key)
+
+        elements_data.append({"type": "IMG", "alt": alt, "src": src, "title": title_attr})
+        markdown_lines.append(f"<IMG alt='{alt}' title='{title_attr}' src='{src}'/>")
+        human_lines.append(f"[IMAGE] Alt: {alt} | Title: {title_attr}")
 
     return {
         "elements": elements_data,
@@ -100,6 +115,19 @@ def extract_semantic_data(html_content, url):
         "page_title": title_text,
         "meta_description": meta_desc_text,
     }
+
+
+def content_is_thin(extracted):
+    """
+    Returns True if httpx got a JS shell with almost no real content.
+    We count elements excluding TITLE and META_DESC since those come
+    from <head> and are present even on empty JS shells.
+    """
+    real_elements = [
+        e for e in extracted["elements"]
+        if e["type"] not in ("TITLE", "META_DESC")
+    ]
+    return len(real_elements) < MIN_CONTENT_ELEMENTS
 
 
 def scrape_with_httpx(url):
@@ -111,7 +139,7 @@ def scrape_with_httpx(url):
 
 
 def scrape_with_playwright(url):
-    """Fallback for JS-heavy sites (SPAs, React, etc.)."""
+    """Fallback for JS-heavy sites (SPAs, React, Vue, Shopify, etc.)."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -122,7 +150,7 @@ def scrape_with_playwright(url):
         page = context.new_page()
         page.goto(url, wait_until="domcontentloaded", timeout=60000)
         try:
-            page.wait_for_selector("h1, p", timeout=15000)
+            page.wait_for_selector("h1, p, img", timeout=15000)
         except Exception:
             page.wait_for_timeout(5000)
         page.wait_for_timeout(2000)
@@ -137,26 +165,29 @@ def scrape():
     if not url:
         return jsonify({"status": "error", "message": "No URL provided"}), 400
 
-    # Be forgiving about missing protocol
     if not url.startswith('http'):
         url = 'https://' + url
 
-    html_content = None
     extraction_method = None
 
-    # Try fast httpx first — saves Render memory and is much quicker
+    # ── Try fast httpx first ─────────────────────────────────────────────
     try:
         html_content = scrape_with_httpx(url)
+        extracted = extract_semantic_data(html_content, url)
         extraction_method = "httpx"
+
+        # If content looks like an empty JS shell, escalate to Playwright
+        if content_is_thin(extracted):
+            raise ValueError("Thin content detected — retrying with Playwright")
+
     except Exception:
-        # Page likely requires JavaScript — spin up Playwright
+        # ── Playwright fallback ──────────────────────────────────────────
         try:
             html_content = scrape_with_playwright(url)
+            extracted = extract_semantic_data(html_content, url)
             extraction_method = "playwright_headless"
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
-
-    extracted = extract_semantic_data(html_content, url)
 
     return jsonify({
         "status": "success",
@@ -175,7 +206,6 @@ def scrape():
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Render can ping this to keep the service warm."""
     return jsonify({"status": "ok"})
 
 
