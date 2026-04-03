@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LLMerick | Extract LLM Ready Site Structure & SEO Data</title>
+    <meta name="description" content="A free, lightning fast tool to extract clean website text, JSON site structures, and raw tags. Perfect for technical SEO audits and feeding clean data to Custom GPTs.">
+    <meta property="og:title" content="LLMerick | Extract LLM Ready Site Structure">
+    <meta property="og:description" content="Stop feeding bloated source code to your AI. Extract clean semantic data and prevent hallucinations.">
+    <meta property="og:type" content="website">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: white;
+            color: black;
+            transition: background-color 0.1s ease-in-out;
+        }
+
+        body.scanning-active {
+            background-color: #22ff00;
+        }
+
+        ::placeholder { color: white; opacity: 1; }
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #fff; border: 2px solid #000; }
+
+        #legalModal { background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(2px); }
+    </style>
+</head>
+<body class="min-h-screen p-8 md:p-12 relative">
+
+    <div class="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+
+        <!-- Logo — spans 2 cols -->
+        <div class="col-span-1 md:col-span-2 flex items-center overflow-hidden md:col-start-1 md:row-start-1">
+            <div class="w-full flex justify-between text-5xl lg:text-[4rem] xl:text-[5.5rem] font-black leading-none" aria-label="LLMerick">
+                <span>L</span><span>L</span><span>M</span><span>E</span><span>R</span><span>I</span><span>C</span><span>K</span>
+            </div>
+        </div>
+
+        <!-- Donate button — right col, same row as logo, hidden until scan succeeds -->
+        <div class="col-span-1 md:col-start-3 md:row-start-1 hidden" id="donateWrapper">
+            <a href="https://buymeacoffee.com/alfredlor" target="_blank"
+                class="w-full h-full min-h-[4rem] bg-black text-white font-bold uppercase flex items-center justify-center text-lg hover:bg-gray-800 transition-colors px-4 text-center">
+                ☕ Buy Me a Coffee
+            </a>
+        </div>
+
+        <!-- Subtitle -->
+        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-2">
+            <h1 class="text-xl lg:text-2xl font-light uppercase tracking-widest text-black text-left mt-2">
+                Extract LLM Ready Site Structure
+            </h1>
+        </div>
+
+        <!-- Intro copy -->
+        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-3">
+            <p class="text-base leading-relaxed font-normal mt-2">
+                Deep crawl up to 50 pages. Strip the bloat. Export pure data.<br><br>
+                <strong>Large Language Models hallucinate when fed raw, bloated source code.</strong>
+                LLMerick extracts a clean, semantic skeleton — giving you condensed, AI-ready data
+                to prevent hallucination and execute perfect SEO audits.
+            </p>
+        </div>
+
+        <!-- URL input — spans 2 cols -->
+        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-4">
+            <input type="text" id="urlInput" placeholder="https://"
+                class="w-full h-16 bg-black text-white px-6 text-xl outline-none focus:ring-2 focus:ring-gray-400">
+        </div>
+
+        <!-- Scan button — right col -->
+        <div class="col-span-1 md:col-start-3 md:row-start-4 flex items-stretch">
+            <button onclick="showLegalModal()" id="scrapeBtn"
+                class="w-full h-16 bg-black text-white font-bold uppercase text-xl hover:bg-gray-800 transition-colors">
+                Scan
+            </button>
+        </div>
+
+        <!-- Results + loading — spans 2 cols -->
+        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-5 mt-4">
+
+            <div id="loadingStatus" class="hidden bg-black text-white p-8 text-center">
+                <h3 class="text-2xl font-bold uppercase mb-2">Scanning...</h3>
+                <p class="text-sm uppercase text-gray-400 mb-2">Please wait up to 60 seconds.</p>
+                <p class="text-xs text-gray-500 italic">Note: LLMerick runs on a free cloud server. The initial boot may take a moment. Thank you for your patience!</p>
+            </div>
+
+            <div id="errorStatus" class="hidden border-4 border-black p-6 mb-8 bg-white">
+                <p id="errorMsg" class="font-bold uppercase text-red-600">An error occurred.</p>
+            </div>
+
+            <div id="resultsArea" class="hidden space-y-8">
+
+                <div class="border-b-4 border-black pb-2 mb-6">
+                    <p class="text-2xl font-black uppercase tracking-wide">
+                        Target: <span id="siteTitleDisplay" class="font-normal tracking-normal text-gray-700"></span>
+                    </p>
+                </div>
+
+                <!-- JSON Output -->
+                <div class="bg-black text-white p-6 shadow-xl">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4 gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold uppercase mb-1">LLM Data (JSON)</h3>
+                            <p class="text-sm text-gray-400 max-w-md">A perfectly structured JSON object of the page, optimized for near-perfect LLM parsing with zero hallucination risk.</p>
+                        </div>
+                        <button onclick="downloadFile('json')" class="bg-white text-black font-bold uppercase px-6 py-3 text-sm hover:bg-gray-200 shrink-0">Download</button>
+                    </div>
+                    <textarea id="jsonOutput" readonly class="w-full h-64 bg-black text-white border border-gray-700 p-4 font-mono text-sm outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Human Audit -->
+                <div class="bg-black text-white p-6 shadow-xl">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4 gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold uppercase mb-1">Human Audit (.txt)</h3>
+                            <p class="text-sm text-gray-400 max-w-md">A clean, code-free outline of all Headings, Paragraphs, Images (with Alt & Title), and Link structures optimized for human review.</p>
+                        </div>
+                        <button onclick="downloadFile('txt')" class="bg-white text-black font-bold uppercase px-6 py-3 text-sm hover:bg-gray-200 shrink-0">Download</button>
+                    </div>
+                    <textarea id="humanOutput" readonly class="w-full h-64 bg-black text-white border border-gray-700 p-4 font-mono text-sm outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Raw Tags Markdown -->
+                <div class="bg-black text-white p-6 shadow-xl">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4 gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold uppercase mb-1">Raw Tags (.md)</h3>
+                            <p class="text-sm text-gray-400 max-w-md">Semantic HTML tags stripped clean and formatted as Markdown. Paste directly into any LLM for heading hierarchy analysis.</p>
+                        </div>
+                        <button onclick="downloadFile('md')" class="bg-white text-black font-bold uppercase px-6 py-3 text-sm hover:bg-gray-200 shrink-0">Download</button>
+                    </div>
+                    <textarea id="markdownOutput" readonly class="w-full h-64 bg-black text-white border border-gray-700 p-4 font-mono text-sm outline-none resize-none"></textarea>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SEO Copy — spans 2 cols -->
+        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-6 mt-12 border-t-4 border-black pt-8">
+
+            <h2 class="text-lg font-black uppercase mb-2">What Are The Output Formats?</h2>
+            <ul class="list-disc pl-5 mb-6 text-sm font-medium text-gray-800 space-y-1">
+                <li><strong>JSON Output:</strong> Plug directly into LLM APIs or Python scripts for programmatic content analysis.</li>
+                <li><strong>Raw Tags (.md):</strong> Paste into ChatGPT to evaluate heading hierarchies (H1–H6), internal link distributions, and missing image alt-text.</li>
+                <li><strong>Human Audit:</strong> Use this clean text file to quickly scan a site's content structure without touching code.</li>
+            </ul>
+
+            <h2 class="text-lg font-black uppercase mb-2">Top Use Cases for LLMerick</h2>
+            <p class="mb-5 text-sm font-medium text-gray-800 leading-relaxed">
+                Whether you need a <strong>website text extractor for ChatGPT</strong> or a <strong>clean URL scraper for custom GPTs</strong>, LLMerick is built for speed. It allows you to seamlessly <strong>convert HTML to Markdown for LLMs</strong>, giving you token-efficient data. By allowing you to <strong>extract JSON site structures</strong>, it provides the exact formatting needed for AI training, programmatic content analysis, and building specialized AI agents.
+            </p>
+
+            <h2 class="text-lg font-black uppercase mb-2">Defeating AI Hallucinations</h2>
+            <p class="mb-5 text-sm font-medium text-gray-800 leading-relaxed">
+                If you are wondering <strong>how to feed a whole website to Claude without hitting token limits</strong> or <strong>how to stop ChatGPT from hallucinating on raw HTML</strong>, the answer is semantic extraction. Traditional scrapers pull bloated inline CSS and JavaScript that confuse AI models and chew through your API budget. LLMerick is the <strong>best tool to extract clean website text for AI training</strong>, stripping the noise so your AI prompts execute flawlessly on pure data.
+            </p>
+
+            <h2 class="text-lg font-black uppercase mb-2">Technical SEO Audits</h2>
+            <p class="mb-5 text-sm font-medium text-gray-800 leading-relaxed">
+                SEO professionals use LLMerick as a lightning-fast <strong>semantic SEO audit tool</strong>. If you are looking for a <strong>free tool to map site architecture for technical SEO</strong>, our engine instantly reveals heading hierarchies (H1–H6), internal link distributions, and missing image alt-text — all without forcing you to dig through complex page source code.
+            </p>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="col-span-1 md:col-span-3 md:col-start-1 md:row-start-7 mt-12 pt-8 border-t-4 border-black flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div class="max-w-3xl">
+                <p class="text-sm font-black uppercase mb-2">Contact & Legal</p>
+                <p class="text-xs font-medium text-gray-600 leading-relaxed">
+                    <strong>Email:</strong> <a href="mailto:hello@llmerick.com" class="hover:text-black hover:underline">hello@llmerick.com</a><br><br>
+                    <strong>Disclaimer & Terms of Use:</strong> LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. By utilizing this service, you agree to respect the Terms of Service and <code>robots.txt</code> policies of the target websites. The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.<br><br>
+                    <strong>About:</strong> This application was created by visual artist and SEO tweaker, Alfred Lor. It was inspired by a desire to solve the problem of getting LLMs to ingest a holistic overview of the heading structures, copy, and internal links within a website. His work can be seen at <a href="http://www.11h21.com" target="_blank" class="font-bold hover:underline">www.11h21.com</a>.
+                </p>
+            </div>
+            <div class="mt-4 md:mt-0 shrink-0">
+                <p class="text-sm font-bold uppercase">© 2026 LLMerick. All rights reserved.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Legal Modal -->
+    <div id="legalModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-6">
+        <div class="bg-black text-white p-8 max-w-2xl w-full border-4 border-white shadow-2xl relative">
+            <h2 class="text-2xl font-black uppercase mb-4">Terms of Authorised Use</h2>
+            <p class="text-sm font-medium leading-relaxed mb-4 text-gray-300">
+                LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorisation to analyse.
+            </p>
+            <p class="text-sm font-medium leading-relaxed mb-8 text-gray-300">
+                By clicking "I Agree", you certify that you have the right to scan the target URL, and you agree to respect the <code>robots.txt</code> policies and Terms of Service of the target website. The developers of LLMerick assume no liability for misuse.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="agreeAndScan()" class="flex-1 bg-white text-black font-bold uppercase py-4 hover:bg-gray-200 transition-colors">
+                    I Agree, Start Scan
+                </button>
+                <button onclick="closeLegalModal()" class="flex-1 border-2 border-white text-white font-bold uppercase py-4 hover:bg-white hover:text-black transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─── CONFIG ───────────────────────────────────────────────────
+        // After deploying the backend to Render, paste its URL below.
+        // Example: "https://llmerick-engine.onrender.com/api/scrape"
+        const API_BASE_URL = "https://YOUR-RENDER-APP-NAME.onrender.com/api/scrape";
+        // ─────────────────────────────────────────────────────────────
+
+        let globalScrapeData = null;
+
+        function showLegalModal() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            if (!urlInput) {
+                alert("Please enter a URL to scan first.");
+                return;
+            }
+            document.getElementById('legalModal').classList.remove('hidden');
+        }
+
+        function closeLegalModal() {
+            document.getElementById('legalModal').classList.add('hidden');
+        }
+
+        function agreeAndScan() {
+            closeLegalModal();
+            document.body.classList.add('scanning-active');
+            startScrape();
+        }
+
+        async function startScrape() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            const btn = document.getElementById('scrapeBtn');
+            const loading = document.getElementById('loadingStatus');
+            const results = document.getElementById('resultsArea');
+            const errorArea = document.getElementById('errorStatus');
+
+            btn.disabled = true;
+            btn.innerText = 'SCANNING...';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            errorArea.classList.add('hidden');
+            results.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}?url=${encodeURIComponent(urlInput)}`);
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    globalScrapeData = data;
+
+                    document.getElementById('siteTitleDisplay').innerText = data.json_data.target_url;
+                    document.getElementById('humanOutput').value = data.human_readable;
+                    document.getElementById('markdownOutput').value = data.llm_markdown;
+                    document.getElementById('jsonOutput').value = JSON.stringify(data.json_data, null, 2);
+
+                    loading.classList.add('hidden');
+                    results.classList.remove('hidden');
+
+                    // Reveal donate button on first successful scan
+                    document.getElementById('donateWrapper').classList.remove('hidden');
+
+                    // Scroll results into view
+                    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                } else {
+                    throw new Error(data.message || "Scrape failed.");
+                }
+
+            } catch (error) {
+                loading.classList.add('hidden');
+                document.getElementById('errorMsg').innerText = `Error: ${error.message}`;
+                errorArea.classList.remove('hidden');
+            } finally {
+                document.body.classList.remove('scanning-active');
+                btn.disabled = false;
+                btn.innerText = 'Scan';
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function downloadFile(type) {
+            if (!globalScrapeData) return;
+
+            let content, filename, mimeType;
+            const domain = globalScrapeData.json_data.target_url
+                .replace(/https?:\/\//, '')
+                .replace(/[^a-z0-9]/gi, '_')
+                .slice(0, 40);
+
+            if (type === 'json') {
+                content = JSON.stringify(globalScrapeData.json_data, null, 2);
+                filename = `llmerick_${domain}.json`;
+                mimeType = 'application/json';
+            } else if (type === 'txt') {
+                content = globalScrapeData.human_readable;
+                filename = `llmerick_${domain}.txt`;
+                mimeType = 'text/plain';
+            } else if (type === 'md') {
+                content = globalScrapeData.llm_markdown;
+                filename = `llmerick_${domain}.md`;
+                mimeType = 'text/markdown';
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+
+</body>
+</html>

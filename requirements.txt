@@ -1,0 +1,6 @@
+flask
+flask-cors
+beautifulsoup4
+httpx
+playwright
+gunicorn
