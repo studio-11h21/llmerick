@@ -12,17 +12,10 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.5",
 }
 
-# A page is considered "thin" (JS shell) if the total visible text content
-# across all real elements is below this character count.
 MIN_CONTENT_CHARS = 1000
 
 
 def get_image_src(tag):
-    """
-    Returns the best available image URL from a tag.
-    Checks real src first, then common lazy-load attributes used by
-    Shopify, WordPress, and other CMS platforms.
-    """
     for attr in ['src', 'data-src', 'data-lazy-src', 'data-original', 'data-srcset']:
         val = tag.get(attr, '').strip()
         if val and attr == 'data-srcset':
@@ -32,17 +25,26 @@ def get_image_src(tag):
     return ''
 
 
+def child_texts(tag):
+    """Return a set of text strings from all descendant block elements.
+    Used to detect LI tags that are just wrappers around headings/paragraphs."""
+    texts = set()
+    for child in tag.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']):
+        t = child.get_text(strip=True)
+        if t:
+            texts.add(t)
+    return texts
+
+
 def extract_semantic_data(html_content, url):
     soup = BeautifulSoup(html_content, 'html.parser')
 
-    # Grab title and meta before stripping anything
     title_tag = soup.find('title')
     title_text = title_tag.get_text(strip=True) if title_tag else ''
 
     meta_desc_tag = soup.find('meta', attrs={'name': 'description'})
     meta_desc_text = meta_desc_tag.get('content', '') if meta_desc_tag else ''
 
-    # Strip noise — remove these before any content search
     for element in soup(["script", "style", "noscript", "header", "footer", "nav", "iframe"]):
         element.decompose()
 
@@ -50,19 +52,21 @@ def extract_semantic_data(html_content, url):
     markdown_lines = []
     human_lines = []
 
+    def h(line):
+        """Append a human-readable line followed by a blank line."""
+        human_lines.append(line)
+        human_lines.append('')
+
     if title_text:
         elements_data.append({"type": "TITLE", "text": title_text})
         markdown_lines.append(f"<TITLE>{title_text}</TITLE>")
-        human_lines.append(f"[TITLE] {title_text}")
+        h(f"[TITLE] {title_text}")
 
     if meta_desc_text:
         elements_data.append({"type": "META_DESC", "text": meta_desc_text})
         markdown_lines.append(f"<META_DESC>{meta_desc_text}</META_DESC>")
-        human_lines.append(f"[META DESCRIPTION] {meta_desc_text}")
+        h(f"[META DESCRIPTION] {meta_desc_text}")
 
-    # Use the full body — header/footer/nav are already stripped above.
-    # This ensures we capture content in sections, articles, and divs
-    # that sit outside of <main>, which is common in CMS-built sites.
     content_root = soup.find('body') or soup
 
     seen_texts = set()
@@ -74,33 +78,46 @@ def extract_semantic_data(html_content, url):
 
         if not text or text in seen_texts:
             continue
+
+        if tag.name == 'li':
+            # Skip LI tags that are just containers for headings/paragraphs
+            # already captured individually — detected when the LI text is
+            # simply a concatenation of its child heading/paragraph texts.
+            children = child_texts(tag)
+            if children and all(c in seen_texts or c in text for c in children):
+                # Still mark the full text seen so it doesn't re-appear
+                seen_texts.add(text)
+                continue
+
         seen_texts.add(text)
 
         if tag.name.startswith('h'):
             elements_data.append({"type": tag.name.upper(), "text": text})
             markdown_lines.append(f"<{tag.name.upper()}>{text}</{tag.name.upper()}>")
-            human_lines.append(f"[{tag.name.upper()}] {text}")
+            h(f"[{tag.name.upper()}] {text}")
 
         elif tag.name == 'p' and len(text) > 20:
             elements_data.append({"type": "P", "text": text})
             markdown_lines.append(f"<P>{text}</P>")
-            human_lines.append(f"{text}\n")
+            h(f"[P] {text}")
 
-        elif tag.name == 'li' and text:
+        elif tag.name == 'li':
             elements_data.append({"type": "LI", "text": text})
             markdown_lines.append(f"<LI>{text}</LI>")
             human_lines.append(f"  • {text}")
+            # No blank line after bullets — they read better tightly grouped.
+            # A blank line is added after the last bullet naturally when the
+            # next heading/paragraph appends its own blank line.
 
         elif tag.name == 'a':
             href = tag.get('href', '')
             if href and not href.startswith('javascript:') and not href.startswith('#'):
                 elements_data.append({"type": "LINK", "text": text, "href": href})
                 markdown_lines.append(f"<A href='{href}'>{text}</A>")
-                human_lines.append(f"[LINK: {text}] -> {href}")
+                human_lines.append(f"[LINK] {text} -> {href}")
+                human_lines.append('')
 
-    # ── FAQ: capture questions from buttons and answers from hidden divs ─
-    # Many CMS FAQ sections use <button> for questions and hide answers
-    # with style="display:none" — BeautifulSoup reads these regardless.
+    # ── FAQ ──────────────────────────────────────────────────────────────
     seen_faq = set()
     for btn in content_root.find_all('button', class_='faqitem'):
         question_tag = btn.find(['h2', 'h3', 'h4', 'span', 'p'])
@@ -109,15 +126,17 @@ def extract_semantic_data(html_content, url):
             continue
         seen_faq.add(question)
 
-        # Answer is usually the next sibling div with class "answer"
         answer_div = btn.find_next_sibling('div')
         answer = answer_div.get_text(strip=True) if answer_div else ''
 
         elements_data.append({"type": "FAQ", "question": question, "answer": answer})
         markdown_lines.append(f"<FAQ><Q>{question}</Q><A>{answer}</A></FAQ>")
-        human_lines.append(f"[FAQ] Q: {question}\n      A: {answer}\n")
+        human_lines.append(f"[FAQ]")
+        human_lines.append(f"  Q: {question}")
+        human_lines.append(f"  A: {answer}")
+        human_lines.append('')
 
-    # ── Images: scan the whole document ─────────────────────────────────
+    # ── Images ───────────────────────────────────────────────────────────
     seen_imgs = set()
     for tag in soup.find_all('img'):
         alt = tag.get('alt', '').strip()
@@ -134,7 +153,11 @@ def extract_semantic_data(html_content, url):
 
         elements_data.append({"type": "IMG", "alt": alt, "src": src, "title": title_attr})
         markdown_lines.append(f"<IMG alt='{alt}' title='{title_attr}' src='{src}'/>")
-        human_lines.append(f"[IMAGE] Alt: {alt} | Title: {title_attr} | Src: {src}")
+        human_lines.append(f"[IMG] {alt}")
+        if title_attr:
+            human_lines.append(f"       Title: {title_attr}")
+        human_lines.append(f"       Src: {src}")
+        human_lines.append('')
 
     return {
         "elements": elements_data,
@@ -146,10 +169,6 @@ def extract_semantic_data(html_content, url):
 
 
 def content_is_thin(extracted):
-    """
-    Returns True if the page looks like an empty JS shell.
-    Measures total character count of headings, paragraphs and list items only.
-    """
     substantive_types = {"H1", "H2", "H3", "H4", "H5", "H6", "P", "LI"}
     total_chars = sum(
         len(e.get("text", ""))
