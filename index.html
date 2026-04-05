@@ -4,209 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>LLMerick | Extract LLM Ready Site Structure & SEO Data</title>
-    <meta name="description" content="A free, lightning fast tool to extract clean website text, JSON site structures, and raw tags. Perfect for technical SEO audits and feeding clean data to Custom GPTs.">
-    <meta property="og:title" content="LLMerick | Extract LLM Ready Site Structure">
-    <meta property="og:description" content="Stop feeding bloated source code to your AI. Extract clean semantic data and prevent hallucinations.">
-    <meta property="og:type" content="website">
-
-    <!-- Bright yellow favicon -->
+    <title>LLMerick | Extract LLM Ready Site Structure</title>
+    <meta name="description" content="A free, lightning fast tool to extract clean website text, JSON site structures, and raw tags.">
+    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23FFE600'/></svg>">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#FFE600',
+                        dark: '#111111'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: white;
-            color: black;
-            transition: background-color 0.1s ease-in-out;
+        body { 
+            background-color: #f9fafb; 
+            color: #111111; 
+            transition: background-color 0.3s ease;
         }
-
-        body.scanning-active {
-            background-color: #22ff00;
-        }
-
-        ::placeholder { color: white; opacity: 1; }
-        ::-webkit-scrollbar { width: 12px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #fff; border: 2px solid #000; }
-
-        #legalModal { background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(2px); }
+        body.scanning-active { background-color: #fef08a; }
+        .glass-modal { background: rgba(17, 17, 17, 0.85); backdrop-filter: blur(8px); }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #999; }
     </style>
 </head>
-<body class="min-h-screen p-8 md:p-12 relative">
+<body class="min-h-screen flex flex-col font-sans">
 
-    <div class="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+    <header class="w-full p-6 flex justify-between items-center max-w-7xl mx-auto">
+        <a href="/" class="text-3xl font-black tracking-tighter text-dark hover:opacity-75 transition">LLMERICK</a>
+        <a id="donateBtn" href="https://buymeacoffee.com/alfredlor" target="_blank" class="hidden md:block bg-brand text-dark font-bold px-6 py-2 rounded-full hover:bg-yellow-400 transition shadow-sm text-sm">
+            Buy Me a Coffee
+        </a>
+    </header>
 
-        <!-- Logo — spans 2 cols -->
-        <div class="col-span-1 md:col-span-2 flex items-center overflow-hidden md:col-start-1 md:row-start-1">
-            <div class="w-full flex justify-between text-5xl lg:text-[4rem] xl:text-[5.5rem] font-black leading-none" aria-label="LLMerick">
-                <span>L</span><span>L</span><span>M</span><span>E</span><span>R</span><span>I</span><span>C</span><span>K</span>
-            </div>
-        </div>
+    <main class="flex-grow flex flex-col items-center justify-center px-4 text-center mt-12 mb-20 max-w-4xl mx-auto w-full">
+        <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight tracking-tight text-dark">
+            Extract LLM ready <br/>site structure.
+        </h1>
+        <p class="text-lg md:text-xl text-gray-600 mb-12 max-w-2xl font-medium">
+            Deep crawl a webpage. Strip the bloat. Export pure data. Raw, bloated source code is LSD for LLMs. LLMerick extracts a clean, semantic skeleton to prevent hallucination.
+        </p>
 
-        <!-- Donate button — right col, same row as logo, hidden until scan succeeds -->
-        <div class="col-span-1 md:col-start-3 md:row-start-1 hidden" id="donateWrapper">
-            <a href="https://buymeacoffee.com/alfredlor" target="_blank"
-                class="w-full h-full min-h-[4rem] font-bold uppercase flex items-center justify-center text-lg transition-colors px-4 text-center"
-                style="background-color: #FFE600; color: #000;">
-                Buy Me a Coffee
-            </a>
-        </div>
-
-        <!-- Subtitle -->
-        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-2">
-            <h1 class="text-xl lg:text-2xl font-light uppercase tracking-widest text-black text-left mt-2">
-                Extract LLM Ready Site Structure
-            </h1>
-        </div>
-
-        <!-- Intro copy -->
-        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-3">
-            <p class="text-base leading-relaxed font-normal mt-2">
-                Deep crawl a webpage. Strip the bloat. Export pure data.<br><br>
-                <strong>Large Language Models hallucinate when fed raw, bloated source code.</strong>
-                LLMerick extracts a clean, semantic skeleton — giving you condensed, AI-ready data
-                to prevent hallucination and execute perfect SEO audits.
-            </p>
-        </div>
-
-        <!-- URL input — spans 2 cols -->
-        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-4">
-            <input type="text" id="urlInput" placeholder="https://"
-                class="w-full h-16 bg-black text-white px-6 text-xl outline-none focus:ring-2 focus:ring-gray-400">
-        </div>
-
-        <!-- Scan button — right col -->
-        <div class="col-span-1 md:col-start-3 md:row-start-4 flex items-stretch">
-            <button onclick="showLegalModal()" id="scrapeBtn"
-                class="w-full h-16 bg-black text-white font-bold uppercase text-xl hover:bg-gray-800 transition-colors">
-                Scan
+        <div class="w-full max-w-2xl flex flex-col sm:flex-row shadow-xl rounded-2xl overflow-hidden mb-12 border border-gray-200 bg-white focus-within:ring-4 focus-within:ring-yellow-200 transition-all">
+            <input type="text" id="urlInput" placeholder="URL" class="flex-grow px-8 py-6 text-lg outline-none text-gray-800 placeholder-gray-400 font-medium">
+            <button onclick="showLegalModal()" id="scrapeBtn" class="bg-dark text-white px-12 py-6 text-xl font-black tracking-wide hover:bg-gray-800 transition">
+                GO
             </button>
         </div>
 
-        <!-- Results + loading — spans 2 cols -->
-        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-5 mt-4">
-
-            <div id="loadingStatus" class="hidden bg-black text-white p-8 text-center">
-                <h3 class="text-2xl font-bold uppercase mb-2">Scanning...</h3>
-                <p class="text-sm uppercase text-gray-400 mb-2">Please wait up to 60 seconds.</p>
-                <p class="text-xs text-gray-500 italic">Note: LLMerick runs on a free cloud server. The initial boot may take a moment. Thank you for your patience!</p>
+        <div id="statusWrapper" class="w-full max-w-5xl text-left hidden">
+            
+            <div id="loadingStatus" class="bg-brand text-dark p-8 rounded-2xl text-center shadow-lg hidden">
+                <h3 class="text-2xl font-black mb-2 animate-pulse">Scanning Target...</h3>
+                <p class="font-medium opacity-80">Please wait up to 60 seconds.</p>
+                <p class="text-xs mt-4 opacity-70">Note: LLMerick runs on a free cloud server. The initial boot may take a moment.</p>
             </div>
 
-            <div id="errorStatus" class="hidden border-4 border-black p-6 mb-8 bg-white">
-                <p id="errorMsg" class="font-bold uppercase text-red-600">An error occurred.</p>
+            <div id="errorStatus" class="bg-red-50 text-red-700 p-6 rounded-2xl hidden border border-red-200 text-center">
+                <p id="errorMsg" class="font-bold">An error occurred.</p>
             </div>
 
-            <div id="resultsArea" class="hidden space-y-8">
+            <div id="resultsArea" class="hidden space-y-6">
+                <div class="flex items-center justify-between border-b-2 border-gray-200 pb-4">
+                    <h2 class="text-2xl font-bold">Target: <span id="siteTitleDisplay" class="text-gray-500 font-normal"></span></h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="font-black text-lg mb-1">JSON Output</h3>
+                        <p class="text-xs text-gray-500 mb-4 h-12">Plug directly into LLM APIs or Python scripts for programmatic analysis.</p>
+                        <textarea id="jsonOutput" readonly class="w-full h-48 bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-xs mb-4 resize-none outline-none text-gray-700"></textarea>
+                        <button onclick="downloadFile('json')" class="mt-auto bg-dark text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Download .json</button>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="font-black text-lg mb-1">Human Audit</h3>
+                        <p class="text-xs text-gray-500 mb-4 h-12">Use this clean text file to quickly scan a site's content structure without touching code.</p>
+                        <textarea id="humanOutput" readonly class="w-full h-48 bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-xs mb-4 resize-none outline-none text-gray-700"></textarea>
+                        <button onclick="downloadFile('txt')" class="mt-auto bg-dark text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Download .txt</button>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                        <h3 class="font-black text-lg mb-1">Raw Tags (md)</h3>
+                        <p class="text-xs text-gray-500 mb-4 h-12">Paste into ChatGPT to evaluate heading hierarchies, links, and alt-text.</p>
+                        <textarea id="markdownOutput" readonly class="w-full h-48 bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-xs mb-4 resize-none outline-none text-gray-700"></textarea>
+                        <button onclick="downloadFile('md')" class="mt-auto bg-dark text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Download .md</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
-                <div class="border-b-4 border-black pb-2 mb-6">
-                    <p class="text-2xl font-black uppercase tracking-wide">
-                        Target: <span id="siteTitleDisplay" class="font-normal tracking-normal text-gray-700"></span>
+    <section class="bg-dark text-white py-24 px-6 mt-auto">
+        <div class="max-w-6xl mx-auto">
+            
+            <div class="text-center mb-20 max-w-4xl mx-auto">
+                <h2 class="text-2xl font-black text-white mb-4 tracking-tight">
+                    Dominate Local & Global Search: <span class="text-brand">Semantic SEO Extraction</span>
+                </h2>
+                <p class="text-gray-300 text-lg md:text-xl leading-relaxed font-medium">
+                    Whether you are optimizing a local business presence or auditing enterprise site architecture, LLMerick provides the clean, structured data required to execute flawless SEO campaigns and train powerful custom AI models.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-16">
+                
+                <div>
+                    <h3 class="text-brand text-2xl font-black mb-4">Use Cases</h3>
+                    <p class="text-gray-300 text-sm leading-loose font-medium">
+                        Whether you need a website text extractor for ChatGPT or a clean URL scraper for custom GPTs, LLMerick is built for speed. It allows you to seamlessly convert HTML to Markdown for LLMs, giving you token-efficient data. By allowing you to extract JSON site structures, it provides the exact formatting needed for AI training, programmatic content analysis, and building specialized AI agents.
                     </p>
                 </div>
 
-                <!-- JSON Output -->
-                <div class="bg-black text-white p-6 shadow-xl">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4 gap-4">
-                        <div>
-                            <h3 class="text-xl font-bold uppercase mb-1">LLM Data (JSON)</h3>
-                            <p class="text-sm text-gray-400 max-w-md">A perfectly structured JSON object of the page, optimized for near-perfect LLM parsing with zero hallucination risk.</p>
-                        </div>
-                        <button onclick="downloadFile('json')" class="bg-white text-black font-bold uppercase px-6 py-3 text-sm hover:bg-gray-200 shrink-0">Download</button>
-                    </div>
-                    <textarea id="jsonOutput" readonly class="w-full h-64 bg-black text-white border border-gray-700 p-4 font-mono text-sm outline-none resize-none"></textarea>
+                <div>
+                    <h3 class="text-brand text-2xl font-black mb-4">Defeating AI Hallucinations</h3>
+                    <p class="text-gray-300 text-sm leading-loose font-medium">
+                        If you are wondering how to feed a whole website to Claude without hitting token limits or how to stop ChatGPT from hallucinating on raw HTML, the answer is semantic extraction. Traditional scrapers pull bloated inline CSS and JavaScript that confuse AI models and chew through your API budget. LLMerick is the best tool to extract clean website text for AI training, stripping the noise so your AI prompts execute flawlessly on pure data.
+                    </p>
                 </div>
 
-                <!-- Human Audit -->
-                <div class="bg-black text-white p-6 shadow-xl">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4 gap-4">
-                        <div>
-                            <h3 class="text-xl font-bold uppercase mb-1">Human Audit (.txt)</h3>
-                            <p class="text-sm text-gray-400 max-w-md">A clean, code-free outline of all Headings, Paragraphs, Images (with Alt & Title), and Link structures optimized for human review.</p>
-                        </div>
-                        <button onclick="downloadFile('txt')" class="bg-white text-black font-bold uppercase px-6 py-3 text-sm hover:bg-gray-200 shrink-0">Download</button>
-                    </div>
-                    <textarea id="humanOutput" readonly class="w-full h-64 bg-black text-white border border-gray-700 p-4 font-mono text-sm outline-none resize-none"></textarea>
+                <div>
+                    <h3 class="text-brand text-2xl font-black mb-4">What Are The Output Formats?</h3>
+                    <ul class="text-gray-300 text-sm leading-loose font-medium list-disc pl-5 space-y-3">
+                        <li><strong class="text-white">JSON Output:</strong> Plug directly into LLM APIs or Python scripts for programmatic content analysis.</li>
+                        <li><strong class="text-white">Raw Tags (.md):</strong> Paste into ChatGPT to evaluate heading hierarchies (H1–H6), internal link distributions, and missing image alt-text.</li>
+                        <li><strong class="text-white">Human Audit:</strong> Use this clean text file to quickly scan a site's content structure without touching code.</li>
+                    </ul>
                 </div>
 
-                <!-- Raw Tags Markdown -->
-                <div class="bg-black text-white p-6 shadow-xl">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4 gap-4">
-                        <div>
-                            <h3 class="text-xl font-bold uppercase mb-1">Raw Tags (.md)</h3>
-                            <p class="text-sm text-gray-400 max-w-md">Semantic HTML tags stripped clean and formatted as Markdown. Paste directly into any LLM for heading hierarchy analysis.</p>
-                        </div>
-                        <button onclick="downloadFile('md')" class="bg-white text-black font-bold uppercase px-6 py-3 text-sm hover:bg-gray-200 shrink-0">Download</button>
-                    </div>
-                    <textarea id="markdownOutput" readonly class="w-full h-64 bg-black text-white border border-gray-700 p-4 font-mono text-sm outline-none resize-none"></textarea>
+                <div>
+                    <h3 class="text-brand text-2xl font-black mb-4">Technical SEO Audits</h3>
+                    <p class="text-gray-300 text-sm leading-loose font-medium">
+                        SEO professionals use LLMerick as a lightning-fast semantic SEO audit tool. If you are looking for a free tool to map site architecture for technical SEO, our engine instantly reveals heading hierarchies (H1–H6), internal link distributions, and missing image alt-text — all without forcing you to dig through complex page source code.
+                    </p>
                 </div>
-
+                
             </div>
         </div>
+    </section>
 
-        <!-- SEO Copy — spans 2 cols -->
-        <div class="col-span-1 md:col-span-2 md:col-start-1 md:row-start-6 mt-12 border-t-4 border-black pt-8">
-
-            <h2 class="text-lg font-black uppercase mb-2">What Are The Output Formats?</h2>
-            <ul class="list-disc pl-5 mb-6 text-sm font-medium text-gray-800 space-y-1">
-                <li><strong>JSON Output:</strong> Plug directly into LLM APIs or Python scripts for programmatic content analysis.</li>
-                <li><strong>Raw Tags (.md):</strong> Paste into ChatGPT to evaluate heading hierarchies (H1–H6), internal link distributions, and missing image alt-text.</li>
-                <li><strong>Human Audit:</strong> Use this clean text file to quickly scan a site's content structure without touching code.</li>
-            </ul>
-
-            <h2 class="text-lg font-black uppercase mb-2">Top Use Cases for LLMerick</h2>
-            <p class="mb-5 text-sm font-medium text-gray-800 leading-relaxed">
-                Whether you need a <strong>website text extractor for ChatGPT</strong> or a <strong>clean URL scraper for custom GPTs</strong>, LLMerick is built for speed. It allows you to seamlessly <strong>convert HTML to Markdown for LLMs</strong>, giving you token-efficient data. By allowing you to <strong>extract JSON site structures</strong>, it provides the exact formatting needed for AI training, programmatic content analysis, and building specialized AI agents.
+    <footer class="bg-[#0a0a0a] text-left md:text-center py-16 text-gray-500 text-sm border-t border-gray-800 px-6">
+        <div class="max-w-4xl mx-auto flex flex-col gap-8">
+            
+            <p class="leading-relaxed text-gray-300 font-medium">
+                <strong class="text-white">About:</strong> This application was created by visual artist and SEO tweaker, Alfred Lor. It was inspired by a desire to solve the problem of getting LLMs to ingest a holistic overview of the heading structures, copy, and internal links within a website. His work can be seen at <a href="http://www.11h21.com" target="_blank" class="text-brand hover:underline font-bold">www.11h21.com</a>. Contact: <a href="mailto:studio.11h21@gmail.com" class="text-white hover:underline">studio.11h21@gmail.com</a>
             </p>
 
-            <h2 class="text-lg font-black uppercase mb-2">Defeating AI Hallucinations</h2>
-            <p class="mb-5 text-sm font-medium text-gray-800 leading-relaxed">
-                If you are wondering <strong>how to feed a whole website to Claude without hitting token limits</strong> or <strong>how to stop ChatGPT from hallucinating on raw HTML</strong>, the answer is semantic extraction. Traditional scrapers pull bloated inline CSS and JavaScript that confuse AI models and chew through your API budget. LLMerick is the <strong>best tool to extract clean website text for AI training</strong>, stripping the noise so your AI prompts execute flawlessly on pure data.
+            <p class="leading-relaxed opacity-60 text-xs">
+                LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.
             </p>
-
-            <h2 class="text-lg font-black uppercase mb-2">Technical SEO Audits</h2>
-            <p class="mb-5 text-sm font-medium text-gray-800 leading-relaxed">
-                SEO professionals use LLMerick as a lightning-fast <strong>semantic SEO audit tool</strong>. If you are looking for a <strong>free tool to map site architecture for technical SEO</strong>, our engine instantly reveals heading hierarchies (H1–H6), internal link distributions, and missing image alt-text — all without forcing you to dig through complex page source code.
-            </p>
-
+            
+            <p class="font-bold text-gray-600 mt-4 text-xs">© 2026 LLMerick. All rights reserved.</p>
         </div>
+    </footer>
 
-        <!-- Footer -->
-        <div class="col-span-1 md:col-span-3 md:col-start-1 md:row-start-7 mt-12 pt-8 border-t-4 border-black flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div class="max-w-3xl">
-                <p class="text-sm font-black uppercase mb-2">Contact & Legal</p>
-                <p class="text-xs font-medium text-gray-600 leading-relaxed">
-                    <strong>Email:</strong> <a href="mailto:studio.11h21@gmail.com" class="hover:text-black hover:underline">studio.11h21@gmail.com</a><br><br>
-                    <strong>Disclaimer & Terms of Use:</strong> LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. By utilizing this service, you agree to respect the Terms of Service and <code>robots.txt</code> policies of the target websites. The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.<br><br>
-                    <strong>About:</strong> This application was created by visual artist and SEO tweaker, Alfred Lor. It was inspired by a desire to solve the problem of getting LLMs to ingest a holistic overview of the heading structures, copy, and internal links within a website. His work can be seen at <a href="http://www.11h21.com" target="_blank" class="font-bold hover:underline">www.11h21.com</a>.
+    <div id="legalModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 glass-modal">
+        <div class="bg-white text-dark p-8 md:p-12 rounded-3xl max-w-2xl w-full shadow-2xl relative transform transition-all">
+            <h2 class="text-3xl font-black mb-4">Disclaimer & Terms of Use</h2>
+            <div class="space-y-4 text-gray-600 text-sm font-medium leading-relaxed mb-8">
+                <p>
+                    LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. By utilizing this service, you agree to respect the Terms of Service and robots.txt policies of the target websites.
+                </p>
+                <p>
+                    The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.
+                </p>
+                <p class="text-dark font-bold bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                    By clicking "I AGREE", you certify that you have the right to scan the target URL, and you agree to respect the robots.txt policies and Terms of Service of the target website.
                 </p>
             </div>
-            <div class="mt-4 md:mt-0 shrink-0">
-                <p class="text-sm font-bold uppercase">© 2026 LLMerick. All rights reserved.</p>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Legal Modal -->
-    <div id="legalModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-6">
-        <div class="bg-black text-white p-8 max-w-2xl w-full border-4 border-white shadow-2xl relative">
-            <h2 class="text-2xl font-black uppercase mb-4">Terms of Authorised Use</h2>
-            <p class="text-sm font-medium leading-relaxed mb-4 text-gray-300">
-                LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorisation to analyse.
-            </p>
-            <p class="text-sm font-medium leading-relaxed mb-8 text-gray-300">
-                By clicking "I Agree", you certify that you have the right to scan the target URL, and you agree to respect the <code>robots.txt</code> policies and Terms of Service of the target website. The developers of LLMerick assume no liability for misuse.
-            </p>
             <div class="flex flex-col sm:flex-row gap-4">
-                <button onclick="agreeAndScan()" class="flex-1 bg-white text-black font-bold uppercase py-4 hover:bg-gray-200 transition-colors">
-                    I Agree, Start Scan
+                <button onclick="agreeAndScan()" class="flex-1 bg-brand text-dark font-black tracking-wide py-4 rounded-xl hover:bg-yellow-400 transition-colors">
+                    I AGREE
                 </button>
-                <button onclick="closeLegalModal()" class="flex-1 border-2 border-white text-white font-bold uppercase py-4 hover:bg-white hover:text-black transition-colors">
-                    Cancel
+                <button onclick="closeLegalModal()" class="flex-1 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl hover:bg-gray-200 transition-colors">
+                    CANCEL
                 </button>
             </div>
         </div>
@@ -214,7 +199,6 @@
 
     <script>
         const API_BASE_URL = "https://llmerick-engine.onrender.com/api/scrape";
-
         let globalScrapeData = null;
 
         function showLegalModal() {
@@ -239,14 +223,16 @@
         async function startScrape() {
             const urlInput = document.getElementById('urlInput').value.trim();
             const btn = document.getElementById('scrapeBtn');
+            const statusWrapper = document.getElementById('statusWrapper');
             const loading = document.getElementById('loadingStatus');
             const results = document.getElementById('resultsArea');
             const errorArea = document.getElementById('errorStatus');
 
             btn.disabled = true;
-            btn.innerText = 'SCANNING...';
+            btn.innerText = '...';
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
+            statusWrapper.classList.remove('hidden');
             errorArea.classList.add('hidden');
             results.classList.add('hidden');
             loading.classList.remove('hidden');
@@ -256,10 +242,8 @@
                 if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
                 const data = await response.json();
-
-                if (data.status === "success") {
+                if (data.status === "success" || data.json_data) {
                     globalScrapeData = data;
-
                     document.getElementById('siteTitleDisplay').innerText = data.json_data.target_url;
                     document.getElementById('humanOutput').value = data.human_readable;
                     document.getElementById('markdownOutput').value = data.llm_markdown;
@@ -268,9 +252,12 @@
                     loading.classList.add('hidden');
                     results.classList.remove('hidden');
 
-                    document.getElementById('donateWrapper').classList.remove('hidden');
+                    const donateBtn = document.getElementById('donateBtn');
+                    donateBtn.classList.remove('hidden');
+                    donateBtn.classList.add('animate-bounce');
+                    setTimeout(() => donateBtn.classList.remove('animate-bounce'), 3000);
 
-                    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    statusWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 } else {
                     throw new Error(data.message || "Scrape failed.");
@@ -283,20 +270,19 @@
             } finally {
                 document.body.classList.remove('scanning-active');
                 btn.disabled = false;
-                btn.innerText = 'Scan';
+                btn.innerText = 'GO';
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
         function downloadFile(type) {
             if (!globalScrapeData) return;
-
             let content, filename, mimeType;
             const domain = globalScrapeData.json_data.target_url
                 .replace(/https?:\/\//, '')
                 .replace(/[^a-z0-9]/gi, '_')
                 .slice(0, 40);
-
+            
             if (type === 'json') {
                 content = JSON.stringify(globalScrapeData.json_data, null, 2);
                 filename = `llmerick_${domain}.json`;
