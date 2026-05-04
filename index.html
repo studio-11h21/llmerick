@@ -115,8 +115,9 @@
         }
         .hero-col-2 { position: relative; z-index: 2; }
         .hero-col-3 { 
-          position: relative; display: flex; flex-direction: column; justify-content: center;
-          padding: var(--gutter); background: var(--off-white);
+          position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+          padding: var(--gutter); padding-top: calc(var(--nav-h) + 24px);
+          background: var(--white);
           border-left: 1px solid var(--black);
         }
         
@@ -207,8 +208,8 @@
         .footer-list { list-style: none; }
         .footer-list li { font-family: var(--font-mono); font-size: 12px; font-weight: 300; color: var(--grey-dark); padding: 6px 0; border-bottom: 1px solid var(--grey-light); transition: color 0.2s ease; cursor: none; }
         .footer-list li:hover { color: var(--black); }
-        .footer-bottom { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; }
-        .footer-bottom p { font-family: var(--font-mono); font-size: 11px; font-weight: 300; color: var(--grey-dark); line-height: 1.7; max-width: 600px;}
+        .footer-bottom { display: flex; justify-content: space-between; align-items: flex-start; padding-top: 20px; }
+        .footer-bottom p { font-family: var(--font-mono); font-size: 11px; font-weight: 300; color: var(--grey-dark); line-height: 1.7; }
         .footer-bottom a { color: var(--grey-dark); border-bottom: 1px solid var(--grey-mid); transition: color 0.2s, border-color 0.2s; }
         .footer-bottom a:hover { color: var(--black); border-color: var(--black); }
 
@@ -265,7 +266,7 @@
         <ul class="nav-links" role="list">
             <li><a href="#documentation">Documentation</a></li>
             <li><a href="https://buymeacoffee.com/alfredlor" target="_blank" id="donateBtn">Support The Project</a></li>
-            <li><a href="http://www.11h21.com" target="_blank">11h21.studio</a></li>
+            <li><a href="https://11h21.studio" target="_blank">11h21.studio</a></li>
         </ul>
     </nav>
 
@@ -386,19 +387,17 @@
                 </ul>
             </div>
             <div>
-                <p class="footer-list-label">Contact</p>
+                <p class="footer-list-label">Contact & Projects</p>
                 <ul class="footer-list">
                     <li><a href="mailto:studio.11h21@gmail.com">studio.11h21@gmail.com</a></li>
-                    <li><a href="http://www.11h21.com" target="_blank">11h21.studio</a></li>
+                    <li><a href="https://11h21.studio" target="_blank">11h21.studio</a></li>
+                    <li><a href="https://www.11h21.com" target="_blank">11h21.com</a></li>
                 </ul>
             </div>
         </div>
         <div class="footer-bottom">
-            <p><strong>About:</strong> This application was created by visual artist and SEO tweaker, Alfred Lor. It was inspired by a desire to solve the problem of getting LLMs to ingest a holistic overview of the heading structures, copy, and internal links within a website.</p>
             <p>© 2026 LLMerick Engine. All rights reserved.</p>
-        </div>
-        <div class="footer-bottom" style="padding-top: 16px;">
-             <p style="opacity: 0.6; font-size: 10px;">Disclaimer: LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. The developers assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.</p>
+            <p style="opacity: 0.6; text-align: right; max-width: 600px;">Disclaimer: LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. The developers assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.</p>
         </div>
     </footer>
 
