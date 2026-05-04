@@ -7,197 +7,452 @@
     <title>LLMerick | Extract LLM Ready Site Structure</title>
     <meta name="description" content="A free, lightning fast tool to extract clean website text, JSON site structures, and raw tags.">
     
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23FFE600'/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23111110'/></svg>">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: '#FFE600',
-                        dark: '#111111'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
 
     <style>
-        body { 
-            background-color: #f9fafb; 
-            color: #111111; 
-            transition: background-color 0.3s ease;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+          --white:      #ffffff;
+          --off-white:  #f6f5f1;
+          --grey-light: #e8e8e6;
+          --grey-mid:   #9a9a96;
+          --grey-dark:  #3a3a38;
+          --black:      #111110;
+          --font-head:  'Archivo', sans-serif;
+          --font-mono:  'IBM Plex Mono', monospace;
+          --nav-h:      52px;
+          --gutter:     clamp(24px, 4vw, 56px);
+          --col-gap:    clamp(16px, 2vw, 32px);
+          --head-size:  clamp(22px, 3.4vw, 49px);
+          --head-lh:    1.1;
         }
-        body.scanning-active { background-color: #fef08a; }
-        .glass-modal { background: rgba(17, 17, 17, 0.85); backdrop-filter: blur(8px); }
-        ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; }
-        ::-webkit-scrollbar-thumb:hover { background: #999; }
+
+        html { font-size: 13px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+        body { font-family: var(--font-mono); font-weight: 300; color: var(--black); background: var(--white); cursor: none; }
+        img, video { display: block; max-width: 100%; }
+        a { color: inherit; text-decoration: none; }
+
+        .hidden { display: none !important; }
+
+        /* ── Cursor ── */
+        #cursor-ring {
+          position: fixed; width: 36px; height: 36px;
+          border: 1.5px solid #ffffff; border-radius: 50%;
+          pointer-events: none; z-index: 9998;
+          transform: translate(-50%, -50%);
+          mix-blend-mode: difference;
+          transition: width 0.25s ease, height 0.25s ease;
+          will-change: left, top; left: -100px; top: -100px;
+        }
+        #cursor-dot {
+          position: fixed; width: 6px; height: 6px;
+          background: #ffffff; border-radius: 50%;
+          pointer-events: none; z-index: 9999;
+          transform: translate(-50%, -50%);
+          mix-blend-mode: difference; will-change: left, top; left: -100px; top: -100px;
+        }
+        body.cursor-hover #cursor-ring { width: 56px; height: 56px; }
+        body.cursor-click #cursor-ring { width: 22px; height: 22px; }
+        @media (hover: none) { #cursor-ring, #cursor-dot { display: none; } }
+
+        /* ── Nav ── */
+        nav#mainNav {
+          position: fixed; top: 0; left: 0;
+          width: 100%; height: var(--nav-h);
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0 var(--gutter); z-index: 200; background: var(--white);
+          border-bottom: 1px solid var(--black);
+        }
+        .nav-logo {
+          font-family: var(--font-mono); font-weight: 500;
+          font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--black);
+        }
+        .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+        .nav-links a {
+          font-family: var(--font-mono); font-weight: 400;
+          font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+          color: var(--black); transition: opacity 0.2s ease;
+        }
+        .nav-links a:hover { opacity: 0.6; }
+
+        /* ── Shared ── */
+        .section-head {
+          font-family: var(--font-head); font-size: var(--head-size);
+          font-weight: 800; font-stretch: 125%; line-height: var(--head-lh);
+          letter-spacing: -0.02em; text-transform: uppercase; color: var(--black);
+        }
+        .row-divider { width: 100%; height: 1px; background: var(--black); display: block; }
+        
+        .service-label {
+          font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+          letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey-mid); margin-bottom: 12px;
+        }
+
+        /* ── ROW 1 — HERO & APP INPUT ── */
+        #hero {
+          min-height: 80vh; display: grid; grid-template-columns: 1fr 1fr 1fr;
+          background: var(--white); overflow: hidden;
+        }
+        .hero-col-1 {
+          display: flex; flex-direction: column; justify-content: flex-end;
+          padding: var(--gutter); padding-top: calc(var(--nav-h) + 24px);
+          position: relative; z-index: 2;
+        }
+        .hero-text-block h1 {
+          display: inline; font-family: var(--font-head); font-size: var(--head-size);
+          font-weight: 800; font-stretch: 125%; line-height: var(--head-lh);
+          letter-spacing: -0.02em; color: var(--black);
+        }
+        .hero-text-block .intro-light {
+          display: inline; font-family: var(--font-head); font-size: var(--head-size);
+          font-weight: 300; font-stretch: 125%; line-height: var(--head-lh);
+          letter-spacing: -0.02em; color: var(--black);
+        }
+        .hero-col-2 { position: relative; z-index: 2; }
+        .hero-col-3 { 
+          position: relative; display: flex; flex-direction: column; justify-content: center;
+          padding: var(--gutter); background: var(--off-white);
+          border-left: 1px solid var(--black);
+        }
+        
+        /* App UI */
+        .app-input {
+          width: 100%; border: none; border-bottom: 1px solid var(--black);
+          padding: 16px 0; font-family: var(--font-mono); font-size: 14px; font-weight: 400;
+          background: transparent; outline: none; color: var(--black); border-radius: 0;
+          margin-bottom: 24px; transition: border-color 0.2s ease;
+        }
+        .app-input::placeholder { color: var(--grey-mid); }
+        .app-input:focus { border-bottom: 2px solid var(--black); }
+        
+        .footer-cta {
+          display: inline-flex; align-items: center; justify-content: space-between; gap: 10px;
+          font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+          letter-spacing: 0.08em; text-transform: uppercase; width: fit-content;
+          color: var(--white); background: var(--black); padding: 13px 20px; border: none;
+          cursor: none; transition: background 0.2s ease, opacity 0.2s ease;
+        }
+        .footer-cta:hover { background: var(--grey-dark); }
+        .footer-cta .arrow { transition: transform 0.2s ease; }
+        .footer-cta:hover .arrow { transform: translateX(5px); }
+        .footer-cta:disabled { opacity: 0.5; pointer-events: none; }
+
+        /* ── STATUS & RESULTS ── */
+        #statusWrapper { width: 100%; }
+        .status-message {
+          padding: clamp(60px, 8vw, 100px) var(--gutter);
+          background: var(--white); text-align: center;
+        }
+        .status-message h3 { font-family: var(--font-head); font-size: clamp(28px, 4vw, 42px); font-weight: 800; font-stretch: 125%; letter-spacing: -0.02em; margin-bottom: 12px; }
+        .status-message p { font-family: var(--font-mono); font-size: 12px; font-weight: 300; color: var(--grey-dark); }
+        #errorStatus { background: var(--off-white); }
+        #errorStatus h3 { color: var(--black); }
+
+        #results-header-row {
+          background: var(--white);
+          padding: clamp(40px, 6vw, 60px) var(--gutter);
+        }
+        .service-grid {
+          display: grid; grid-template-columns: repeat(3, 1fr);
+          gap: 1px; align-items: stretch; background: var(--black);
+        }
+        .service-col {
+          background: var(--white); display: flex; flex-direction: column;
+          padding: clamp(48px, 5vw, 80px) clamp(32px, 4vw, 56px);
+        }
+        .service-col:nth-child(1) { padding-left: var(--gutter); }
+        .service-col:nth-child(3) { padding-right: var(--gutter); }
+        .service-col h3 {
+          font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+          letter-spacing: 0.1em; text-transform: uppercase; color: var(--black);
+          margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--grey-light);
+        }
+        .service-col p {
+          font-family: var(--font-mono); font-size: 12px; font-weight: 300;
+          line-height: 1.85; color: var(--grey-dark); margin-bottom: 24px;
+        }
+        .app-textarea {
+          width: 100%; height: 240px; border: 1px solid var(--grey-light);
+          background: var(--off-white); padding: 16px;
+          font-family: var(--font-mono); font-size: 10px; line-height: 1.6;
+          color: var(--grey-dark); resize: none; outline: none; margin-bottom: 24px;
+        }
+
+        /* ── 4 COL GRID (DOCUMENTATION) ── */
+        .info-grid {
+          display: grid; grid-template-columns: repeat(4, 1fr);
+          gap: 1px; align-items: stretch; background: var(--black);
+        }
+
+        /* ── FOOTER ── */
+        #footer { 
+          background: var(--white); color: var(--black); 
+          padding: clamp(40px, 6vw, 80px) var(--gutter) clamp(28px, 3vw, 40px); 
+        }
+        .footer-top {
+          display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--col-gap);
+          padding-bottom: clamp(32px, 5vw, 64px); border-bottom: 1px solid var(--black); align-items: start;
+        }
+        .footer-tagline {
+          font-family: var(--font-head); font-size: clamp(18px, 2.2vw, 28px);
+          font-weight: 800; font-stretch: 125%; letter-spacing: -0.02em;
+          color: var(--black); line-height: 1.2; margin-bottom: 28px;
+        }
+        .footer-list-label { font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey-mid); margin-bottom: 16px; }
+        .footer-list { list-style: none; }
+        .footer-list li { font-family: var(--font-mono); font-size: 12px; font-weight: 300; color: var(--grey-dark); padding: 6px 0; border-bottom: 1px solid var(--grey-light); transition: color 0.2s ease; cursor: none; }
+        .footer-list li:hover { color: var(--black); }
+        .footer-bottom { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; }
+        .footer-bottom p { font-family: var(--font-mono); font-size: 11px; font-weight: 300; color: var(--grey-dark); line-height: 1.7; max-width: 600px;}
+        .footer-bottom a { color: var(--grey-dark); border-bottom: 1px solid var(--grey-mid); transition: color 0.2s, border-color 0.2s; }
+        .footer-bottom a:hover { color: var(--black); border-color: var(--black); }
+
+        /* ── MODAL ── */
+        .glass-modal {
+          position: fixed; inset: 0; background: rgba(17, 17, 16, 0.85); backdrop-filter: blur(8px);
+          display: flex; items-center; justify-content: center; z-index: 1000; padding: var(--gutter);
+        }
+        .modal-content {
+          background: var(--white); border: 1px solid var(--black);
+          padding: clamp(32px, 5vw, 64px); max-width: 600px; width: 100%; display: flex; flex-direction: column; gap: 24px;
+          margin: auto;
+        }
+        .modal-content h2 { font-family: var(--font-head); font-size: clamp(24px, 3vw, 36px); font-weight: 800; font-stretch: 125%; letter-spacing: -0.02em; }
+        .modal-content p { font-family: var(--font-mono); font-size: 12px; font-weight: 300; line-height: 1.85; color: var(--grey-dark); }
+        .modal-box { background: var(--off-white); padding: 16px; border: 1px solid var(--grey-light); }
+        .modal-box p { color: var(--black); font-weight: 400; }
+        .modal-actions { display: flex; gap: 16px; margin-top: 12px; }
+        .modal-btn-cancel {
+          display: inline-flex; align-items: center; justify-content: center;
+          font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+          letter-spacing: 0.08em; text-transform: uppercase; width: 100%;
+          color: var(--black); background: var(--off-white); padding: 13px 20px; border: 1px solid var(--grey-light);
+          cursor: none; transition: background 0.2s ease;
+        }
+        .modal-btn-cancel:hover { background: var(--grey-light); }
+
+        /* ── Responsive ── */
+        @media (max-width: 960px) {
+          #hero { grid-template-columns: 1fr 1fr; }
+          .hero-col-2 { display: none; }
+          .service-grid { grid-template-columns: 1fr; }
+          .info-grid { grid-template-columns: 1fr 1fr; }
+          .service-col:nth-child(1), .service-col:nth-child(3) { padding: clamp(48px, 5vw, 80px) var(--gutter); }
+          .footer-top { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+          #hero { grid-template-columns: 1fr; }
+          .hero-col-3 { border-left: none; border-top: 1px solid var(--black); }
+          .info-grid { grid-template-columns: 1fr; }
+          .footer-top { grid-template-columns: 1fr; }
+          .footer-bottom { flex-direction: column; align-items: flex-start; gap: 16px; }
+          .modal-actions { flex-direction: column; }
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans">
+<body>
 
-    <header class="w-full p-6 flex justify-between items-center max-w-7xl mx-auto">
-        <a href="/" class="text-3xl font-black tracking-tighter text-dark hover:opacity-75 transition">LLMERICK</a>
-        <a id="donateBtn" href="https://buymeacoffee.com/alfredlor" target="_blank" class="hidden md:block bg-brand text-dark font-bold px-6 py-2 rounded-full hover:bg-yellow-400 transition shadow-sm text-sm">
-            Buy Me a Coffee
-        </a>
-    </header>
+    <div id="cursor-ring" aria-hidden="true"></div>
+    <div id="cursor-dot"  aria-hidden="true"></div>
 
-    <main class="flex-grow flex flex-col items-center justify-center px-4 text-center mt-12 mb-20 max-w-4xl mx-auto w-full">
-        <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight tracking-tight text-dark">
-            Extract LLM ready <br/>site structure.
-        </h1>
-        <p class="text-lg md:text-xl text-gray-600 mb-12 max-w-2xl font-medium">
-            Deep crawl a webpage. Strip the bloat. Export pure data. Raw, bloated source code is LSD for LLMs. LLMerick extracts a clean, semantic skeleton to prevent hallucination.
-        </p>
+    <nav id="mainNav" aria-label="Primary navigation">
+        <a href="/" class="nav-logo" aria-label="Home">LLMerick Engine</a>
+        <ul class="nav-links" role="list">
+            <li><a href="#documentation">Documentation</a></li>
+            <li><a href="https://buymeacoffee.com/alfredlor" target="_blank" id="donateBtn">Support The Project</a></li>
+            <li><a href="http://www.11h21.com" target="_blank">11h21.studio</a></li>
+        </ul>
+    </nav>
 
-        <div class="w-full max-w-2xl flex flex-col sm:flex-row shadow-xl rounded-2xl overflow-hidden mb-12 border border-gray-200 bg-white focus-within:ring-4 focus-within:ring-yellow-200 transition-all">
-            <input type="text" id="urlInput" placeholder="URL" class="flex-grow px-8 py-6 text-lg outline-none text-gray-800 placeholder-gray-400 font-medium">
-            <button onclick="showLegalModal()" id="scrapeBtn" class="bg-dark text-white px-12 py-6 text-xl font-black tracking-wide hover:bg-gray-800 transition">
-                GO
-            </button>
-        </div>
-
-        <div id="statusWrapper" class="w-full max-w-5xl text-left hidden">
-            
-            <div id="loadingStatus" class="bg-brand text-dark p-8 rounded-2xl text-center shadow-lg hidden">
-                <h3 class="text-2xl font-black mb-2 animate-pulse">Scanning Target...</h3>
-                <p class="font-medium opacity-80">Please wait up to 60 seconds.</p>
-                <p class="text-xs mt-4 opacity-70">Note: LLMerick runs on a free cloud server. The initial boot may take a moment.</p>
-            </div>
-
-            <div id="errorStatus" class="bg-red-50 text-red-700 p-6 rounded-2xl hidden border border-red-200 text-center">
-                <p id="errorMsg" class="font-bold">An error occurred.</p>
-            </div>
-
-            <div id="resultsArea" class="hidden space-y-6">
-                <div class="flex items-center justify-between border-b-2 border-gray-200 pb-4">
-                    <h2 class="text-2xl font-bold">Target: <span id="siteTitleDisplay" class="text-gray-500 font-normal"></span></h2>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                        <h3 class="font-black text-lg mb-1">JSON Output</h3>
-                        <p class="text-xs text-gray-500 mb-4 h-12">Plug directly into LLM APIs or Python scripts for programmatic analysis.</p>
-                        <textarea id="jsonOutput" readonly class="w-full h-48 bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-xs mb-4 resize-none outline-none text-gray-700"></textarea>
-                        <button onclick="downloadFile('json')" class="mt-auto bg-dark text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Download .json</button>
-                    </div>
-                    
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                        <h3 class="font-black text-lg mb-1">Human Audit</h3>
-                        <p class="text-xs text-gray-500 mb-4 h-12">Use this clean text file to quickly scan a site's content structure without touching code.</p>
-                        <textarea id="humanOutput" readonly class="w-full h-48 bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-xs mb-4 resize-none outline-none text-gray-700"></textarea>
-                        <button onclick="downloadFile('txt')" class="mt-auto bg-dark text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Download .txt</button>
-                    </div>
-                    
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                        <h3 class="font-black text-lg mb-1">Raw Tags (md)</h3>
-                        <p class="text-xs text-gray-500 mb-4 h-12">Paste into ChatGPT to evaluate heading hierarchies, links, and alt-text.</p>
-                        <textarea id="markdownOutput" readonly class="w-full h-48 bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-xs mb-4 resize-none outline-none text-gray-700"></textarea>
-                        <button onclick="downloadFile('md')" class="mt-auto bg-dark text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Download .md</button>
-                    </div>
-                </div>
+    <!-- ── HERO / INPUT ── -->
+    <section id="hero" aria-label="Introduction">
+        <div class="hero-col-1">
+            <div class="hero-text-block">
+                <h1>Extract LLM ready</h1><span class="intro-light"> site structure. Deep crawl a webpage. Strip the bloat. Export pure data.</span>
             </div>
         </div>
-    </main>
+        <div class="hero-col-2" aria-hidden="true"></div>
+        <div class="hero-col-3">
+            <p class="service-label">Target URL</p>
+            <input type="text" id="urlInput" placeholder="https://..." class="app-input" autocomplete="off" spellcheck="false" />
+            <button onclick="showLegalModal()" id="scrapeBtn" class="footer-cta">Extract Data <span class="arrow">→</span></button>
+        </div>
+    </section>
 
-    <section class="bg-dark text-white py-24 px-6 mt-auto">
-        <div class="max-w-6xl mx-auto">
+    <span class="row-divider" role="separator" aria-hidden="true"></span>
+
+    <!-- ── RESULTS / STATUS WRAPPER ── -->
+    <div id="statusWrapper" class="hidden">
+        
+        <!-- Loading State -->
+        <section id="loadingStatus" class="status-message hidden">
+            <h3>Scanning Target...</h3>
+            <p>Please wait up to 60 seconds.</p>
+            <p style="margin-top: 12px; opacity: 0.6;">Note: LLMerick runs on a free cloud server. The initial boot may take a moment.</p>
+        </section>
+
+        <!-- Error State -->
+        <section id="errorStatus" class="status-message hidden">
+            <h3 id="errorMsg">An error occurred.</h3>
+            <p>Please check the URL and try again.</p>
+        </section>
+
+        <!-- Results Grid -->
+        <div id="resultsArea" class="hidden">
+            <section id="results-header-row">
+                <p class="service-label">Scan Complete</p>
+                <h2 class="section-head" style="text-transform: none;"><span id="siteTitleDisplay" style="font-weight: 300;"></span></h2>
+            </section>
             
-            <div class="text-center mb-20 max-w-4xl mx-auto">
-                <h2 class="text-2xl font-black text-white mb-4 tracking-tight">
-                    Dominate Local & Global Search: <span class="text-brand">Semantic SEO Extraction</span>
-                </h2>
-                <p class="text-gray-300 text-lg md:text-xl leading-relaxed font-medium">
-                    Whether you are optimizing a local business presence or auditing enterprise site architecture, LLMerick provides the clean, structured data required to execute flawless SEO campaigns and train powerful custom AI models.
-                </p>
+            <span class="row-divider" role="separator" aria-hidden="true"></span>
+
+            <section id="service-grid-row">
+                <div class="service-grid">
+                    <div class="service-col">
+                        <h3>JSON Output</h3>
+                        <p>Plug directly into LLM APIs or Python scripts for programmatic analysis.</p>
+                        <textarea id="jsonOutput" readonly class="app-textarea"></textarea>
+                        <button onclick="downloadFile('json')" class="footer-cta" style="width: 100%;">Download .json <span class="arrow">↓</span></button>
+                    </div>
+                    
+                    <div class="service-col">
+                        <h3>Human Audit</h3>
+                        <p>Use this clean text file to quickly scan a site's content structure without touching code.</p>
+                        <textarea id="humanOutput" readonly class="app-textarea"></textarea>
+                        <button onclick="downloadFile('txt')" class="footer-cta" style="width: 100%;">Download .txt <span class="arrow">↓</span></button>
+                    </div>
+                    
+                    <div class="service-col">
+                        <h3>Raw Tags (md)</h3>
+                        <p>Paste into ChatGPT to evaluate heading hierarchies, links, and alt-text.</p>
+                        <textarea id="markdownOutput" readonly class="app-textarea"></textarea>
+                        <button onclick="downloadFile('md')" class="footer-cta" style="width: 100%;">Download .md <span class="arrow">↓</span></button>
+                    </div>
+                </div>
+            </section>
+            <span class="row-divider" role="separator" aria-hidden="true"></span>
+        </div>
+    </div>
+
+    <!-- ── DOCUMENTATION HEADER ── -->
+    <section id="documentation" style="background: var(--white); padding: clamp(60px, 8vw, 100px) var(--gutter);">
+        <p class="service-label">Documentation</p>
+        <h2 class="section-head">Semantic SEO Extraction</h2>
+    </section>
+
+    <span class="row-divider" role="separator" aria-hidden="true"></span>
+
+    <!-- ── DOCUMENTATION GRID ── -->
+    <section id="info-grid-row">
+        <div class="info-grid service-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+            <div class="service-col" style="padding-left: var(--gutter);">
+                <h3>Use Cases</h3>
+                <p>Whether you need a website text extractor for ChatGPT or a clean URL scraper for custom GPTs, LLMerick is built for speed. It allows you to seamlessly convert HTML to Markdown for LLMs, giving you token-efficient data. By allowing you to extract JSON site structures, it provides the exact formatting needed for AI training, programmatic content analysis, and building specialized AI agents.</p>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-16">
-                
-                <div>
-                    <h3 class="text-brand text-2xl font-black mb-4">Use Cases</h3>
-                    <p class="text-gray-300 text-sm leading-loose font-medium">
-                        Whether you need a website text extractor for ChatGPT or a clean URL scraper for custom GPTs, LLMerick is built for speed. It allows you to seamlessly convert HTML to Markdown for LLMs, giving you token-efficient data. By allowing you to extract JSON site structures, it provides the exact formatting needed for AI training, programmatic content analysis, and building specialized AI agents.
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-brand text-2xl font-black mb-4">Defeating AI Hallucinations</h3>
-                    <p class="text-gray-300 text-sm leading-loose font-medium">
-                        If you are wondering how to feed a whole website to Claude without hitting token limits or how to stop ChatGPT from hallucinating on raw HTML, the answer is semantic extraction. Traditional scrapers pull bloated inline CSS and JavaScript that confuse AI models and chew through your API budget. LLMerick is the best tool to extract clean website text for AI training, stripping the noise so your AI prompts execute flawlessly on pure data.
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-brand text-2xl font-black mb-4">What Are The Output Formats?</h3>
-                    <ul class="text-gray-300 text-sm leading-loose font-medium list-disc pl-5 space-y-3">
-                        <li><strong class="text-white">JSON Output:</strong> Plug directly into LLM APIs or Python scripts for programmatic content analysis.</li>
-                        <li><strong class="text-white">Raw Tags (.md):</strong> Paste into ChatGPT to evaluate heading hierarchies (H1–H6), internal link distributions, and missing image alt-text.</li>
-                        <li><strong class="text-white">Human Audit:</strong> Use this clean text file to quickly scan a site's content structure without touching code.</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h3 class="text-brand text-2xl font-black mb-4">Technical SEO Audits</h3>
-                    <p class="text-gray-300 text-sm leading-loose font-medium">
-                        SEO professionals use LLMerick as a lightning-fast semantic SEO audit tool. If you are looking for a free tool to map site architecture for technical SEO, our engine instantly reveals heading hierarchies (H1–H6), internal link distributions, and missing image alt-text — all without forcing you to dig through complex page source code.
-                    </p>
-                </div>
-                
+            <div class="service-col">
+                <h3>Defeating Hallucinations</h3>
+                <p>If you are wondering how to feed a whole website to Claude without hitting token limits or how to stop ChatGPT from hallucinating on raw HTML, the answer is semantic extraction. Traditional scrapers pull bloated inline CSS and JavaScript that confuse AI models and chew through your API budget. LLMerick is the best tool to extract clean website text for AI training.</p>
+            </div>
+            <div class="service-col">
+                <h3>Output Formats</h3>
+                <p><strong>JSON Output:</strong> Plug directly into LLM APIs or Python scripts.<br><br><strong>Raw Tags (.md):</strong> Paste into ChatGPT to evaluate heading hierarchies (H1–H6), internal link distributions, and missing image alt-text.<br><br><strong>Human Audit:</strong> Use this clean text file to quickly scan a site's content structure.</p>
+            </div>
+            <div class="service-col" style="padding-right: var(--gutter);">
+                <h3>Technical SEO Audits</h3>
+                <p>SEO professionals use LLMerick as a lightning-fast semantic SEO audit tool. If you are looking for a free tool to map site architecture for technical SEO, our engine instantly reveals heading hierarchies, internal link distributions, and missing image alt-text — all without forcing you to dig through complex page source code.</p>
             </div>
         </div>
     </section>
 
-    <footer class="bg-[#0a0a0a] text-left md:text-center py-16 text-gray-500 text-sm border-t border-gray-800 px-6">
-        <div class="max-w-4xl mx-auto flex flex-col gap-8">
-            
-            <p class="leading-relaxed text-gray-300 font-medium">
-                <strong class="text-white">About:</strong> This application was created by visual artist and SEO tweaker, Alfred Lor. It was inspired by a desire to solve the problem of getting LLMs to ingest a holistic overview of the heading structures, copy, and internal links within a website. His work can be seen at <a href="http://www.11h21.com" target="_blank" class="text-brand hover:underline font-bold">www.11h21.com</a>. Contact: <a href="mailto:studio.11h21@gmail.com" class="text-white hover:underline">studio.11h21@gmail.com</a>
-            </p>
+    <span class="row-divider" role="separator" aria-hidden="true"></span>
 
-            <p class="leading-relaxed opacity-60 text-xs">
-                LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.
-            </p>
-            
-            <p class="font-bold text-gray-600 mt-4 text-xs">© 2026 LLMerick. All rights reserved.</p>
+    <!-- ── FOOTER ── -->
+    <footer id="footer" aria-label="Site footer">
+        <div class="footer-top">
+            <div>
+                <p class="footer-tagline">Built for clean data extraction.</p>
+                <a href="https://buymeacoffee.com/alfredlor" target="_blank" class="footer-cta">Support The Project <span class="arrow">→</span></a>
+            </div>
+            <div>
+                <p class="footer-list-label">Legal</p>
+                <ul class="footer-list">
+                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div>
+                <p class="footer-list-label">Contact</p>
+                <ul class="footer-list">
+                    <li><a href="mailto:studio.11h21@gmail.com">studio.11h21@gmail.com</a></li>
+                    <li><a href="http://www.11h21.com" target="_blank">11h21.studio</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p><strong>About:</strong> This application was created by visual artist and SEO tweaker, Alfred Lor. It was inspired by a desire to solve the problem of getting LLMs to ingest a holistic overview of the heading structures, copy, and internal links within a website.</p>
+            <p>© 2026 LLMerick Engine. All rights reserved.</p>
+        </div>
+        <div class="footer-bottom" style="padding-top: 16px;">
+             <p style="opacity: 0.6; font-size: 10px;">Disclaimer: LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. The developers assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.</p>
         </div>
     </footer>
 
-    <div id="legalModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 glass-modal">
-        <div class="bg-white text-dark p-8 md:p-12 rounded-3xl max-w-2xl w-full shadow-2xl relative transform transition-all">
-            <h2 class="text-3xl font-black mb-4">Disclaimer & Terms of Use</h2>
-            <div class="space-y-4 text-gray-600 text-sm font-medium leading-relaxed mb-8">
-                <p>
-                    LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. By utilizing this service, you agree to respect the Terms of Service and robots.txt policies of the target websites.
-                </p>
-                <p>
-                    The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.
-                </p>
-                <p class="text-dark font-bold bg-yellow-50 p-4 rounded-xl border border-yellow-200">
-                    By clicking "I AGREE", you certify that you have the right to scan the target URL, and you agree to respect the robots.txt policies and Terms of Service of the target website.
-                </p>
+    <!-- ── LEGAL MODAL ── -->
+    <div id="legalModal" class="glass-modal hidden">
+        <div class="modal-content">
+            <h2>Disclaimer & Terms of Use</h2>
+            <p>LLMerick is an extraction tool designed for SEO professionals to audit domains they own, operate, or have explicit authorization to analyze. By utilizing this service, you agree to respect the Terms of Service and robots.txt policies of the target websites.</p>
+            <p>The developers and hosts of LLMerick assume no liability for misuse, copyright infringement, or damages arising from unauthorized scraping. Data is processed ephemerally and is not stored on our servers.</p>
+            
+            <div class="modal-box">
+                <p>By clicking "I AGREE", you certify that you have the right to scan the target URL, and you agree to respect the robots.txt policies and Terms of Service of the target website.</p>
             </div>
-            <div class="flex flex-col sm:flex-row gap-4">
-                <button onclick="agreeAndScan()" class="flex-1 bg-brand text-dark font-black tracking-wide py-4 rounded-xl hover:bg-yellow-400 transition-colors">
-                    I AGREE
-                </button>
-                <button onclick="closeLegalModal()" class="flex-1 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl hover:bg-gray-200 transition-colors">
-                    CANCEL
-                </button>
+            
+            <div class="modal-actions">
+                <button onclick="agreeAndScan()" class="footer-cta" style="width: 100%; justify-content: center;">I AGREE <span class="arrow">→</span></button>
+                <button onclick="closeLegalModal()" class="modal-btn-cancel">CANCEL</button>
             </div>
         </div>
     </div>
 
     <script>
+        // ── Cursor ──
+        const ring = document.getElementById('cursor-ring');
+        const dot  = document.getElementById('cursor-dot');
+        let tx = -100, ty = -100, rx = -100, ry = -100;
+        let cursorActive = false;
+
+        document.addEventListener('mousemove', e => {
+          tx = e.clientX; ty = e.clientY;
+          dot.style.left = tx + 'px'; dot.style.top  = ty + 'px';
+          cursorActive = true;
+        });
+
+        (function lerp() {
+          if (cursorActive) {
+            rx += (tx - rx) * 0.15; ry += (ty - ry) * 0.15;
+            ring.style.left = rx + 'px'; ring.style.top  = ry + 'px';
+          }
+          requestAnimationFrame(lerp);
+        })();
+
+        function bindCursorHover() {
+          document.querySelectorAll('a, button, input, textarea, .footer-list li').forEach(el => {
+            el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+            el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+          });
+        }
+        bindCursorHover();
+
+        document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
+        document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
+
+        // ── App Logic ──
         const API_BASE_URL = "https://llmerick-engine.onrender.com/api/scrape";
         let globalScrapeData = null;
 
@@ -216,7 +471,6 @@
 
         function agreeAndScan() {
             closeLegalModal();
-            document.body.classList.add('scanning-active');
             startScrape();
         }
 
@@ -229,8 +483,7 @@
             const errorArea = document.getElementById('errorStatus');
 
             btn.disabled = true;
-            btn.innerText = '...';
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.innerHTML = 'Scanning...';
 
             statusWrapper.classList.remove('hidden');
             errorArea.classList.add('hidden');
@@ -252,11 +505,6 @@
                     loading.classList.add('hidden');
                     results.classList.remove('hidden');
 
-                    const donateBtn = document.getElementById('donateBtn');
-                    donateBtn.classList.remove('hidden');
-                    donateBtn.classList.add('animate-bounce');
-                    setTimeout(() => donateBtn.classList.remove('animate-bounce'), 3000);
-
                     statusWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 } else {
@@ -268,10 +516,8 @@
                 document.getElementById('errorMsg').innerText = `Error: ${error.message}`;
                 errorArea.classList.remove('hidden');
             } finally {
-                document.body.classList.remove('scanning-active');
                 btn.disabled = false;
-                btn.innerText = 'GO';
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.innerHTML = 'Extract Data <span class="arrow">→</span>';
             }
         }
 
@@ -306,6 +552,5 @@
             URL.revokeObjectURL(url);
         }
     </script>
-
 </body>
 </html>
