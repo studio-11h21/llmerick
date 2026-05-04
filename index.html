@@ -72,13 +72,40 @@
           font-family: var(--font-mono); font-weight: 500;
           font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--black);
         }
-        .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
-        .nav-links a {
-          font-family: var(--font-mono); font-weight: 400;
-          font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-          color: var(--black); transition: opacity 0.2s ease;
+        
+        .nav-hamburger {
+          display: flex; flex-direction: column; gap: 5px;
+          cursor: none; padding: 4px; background: none; border: none; z-index: 201;
         }
-        .nav-links a:hover { opacity: 0.6; }
+        .nav-hamburger span {
+          display: block; width: 22px; height: 1px; background: var(--black);
+          transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;
+          transform-origin: center;
+        }
+        .nav-hamburger.open span { background: var(--white); }
+        .nav-hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+        .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+        .nav-hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+        
+        .menu-overlay {
+          position: fixed; inset: 0; background: var(--black); z-index: 190;
+          display: flex; align-items: center; justify-content: center;
+          opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+        }
+        .menu-overlay.open { opacity: 1; pointer-events: all; }
+        .menu-links { list-style: none; text-align: center; }
+        .menu-links li { overflow: hidden; }
+        .menu-links a {
+          display: inline-block; font-family: var(--font-head);
+          font-size: clamp(26px, 5vw, 62px); font-weight: 800; font-stretch: 125%;
+          letter-spacing: -0.02em; color: var(--white); line-height: 1.3; padding: 4px 0;
+          transform: translateY(110%);
+          transition: transform 0.5s cubic-bezier(0.16,1,0.3,1), color 0.2s ease;
+        }
+        .menu-overlay.open .menu-links a { transform: translateY(0); }
+        .menu-links li:nth-child(1) a { transition-delay: 0.05s; }
+        .menu-links li:nth-child(2) a { transition-delay: 0.10s; }
+        .menu-links a:hover { color: var(--grey-mid); }
 
         /* ── Shared ── */
         .section-head {
@@ -142,6 +169,16 @@
         .footer-cta .arrow { transition: transform 0.2s ease; }
         .footer-cta:hover .arrow { transform: translateX(5px); }
         .footer-cta:disabled { opacity: 0.5; pointer-events: none; }
+
+        .btn-outline {
+          display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+          font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+          letter-spacing: 0.08em; text-transform: uppercase; width: 100%;
+          color: var(--black); background: var(--white); padding: 13px 20px;
+          border: 1px solid var(--black);
+          cursor: none; transition: background 0.2s ease;
+        }
+        .btn-outline:hover { background: var(--off-white); }
 
         /* ── STATUS & RESULTS ── */
         #statusWrapper { width: 100%; }
@@ -261,13 +298,20 @@
     <div id="cursor-ring" aria-hidden="true"></div>
     <div id="cursor-dot"  aria-hidden="true"></div>
 
+    <div class="menu-overlay" id="menuOverlay" aria-hidden="true">
+        <nav aria-label="Mobile navigation">
+            <ul class="menu-links">
+                <li><a href="https://11h21.studio" target="_blank" rel="noopener">11h21 Design and SEO</a></li>
+                <li><a href="https://www.11h21.com" target="_blank" rel="noopener">11h21 Photography</a></li>
+            </ul>
+        </nav>
+    </div>
+
     <nav id="mainNav" aria-label="Primary navigation">
         <a href="/" class="nav-logo" aria-label="Home">LLMerick Engine</a>
-        <ul class="nav-links" role="list">
-            <li><a href="#documentation">Documentation</a></li>
-            <li><a href="https://buymeacoffee.com/alfredlor" target="_blank" id="donateBtn">Support The Project</a></li>
-            <li><a href="https://11h21.studio" target="_blank">11h21.studio</a></li>
-        </ul>
+        <button class="nav-hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="menuOverlay">
+            <span></span><span></span><span></span>
+        </button>
     </nav>
 
     <!-- ── HERO / INPUT ── -->
@@ -314,26 +358,37 @@
 
             <section id="service-grid-row">
                 <div class="service-grid">
+                    
                     <div class="service-col">
                         <h3>JSON Output</h3>
                         <p>Plug directly into LLM APIs or Python scripts for programmatic analysis.</p>
                         <textarea id="jsonOutput" readonly class="app-textarea"></textarea>
-                        <button onclick="downloadFile('json')" class="footer-cta" style="width: 100%;">Download .json <span class="arrow">↓</span></button>
+                        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+                            <button onclick="downloadFile('json')" class="footer-cta" style="width: 100%; justify-content: center;">Download .json <span class="arrow">↓</span></button>
+                            <a href="https://buymeacoffee.com/alfredlor" target="_blank" rel="noopener" class="btn-outline">Support the project</a>
+                        </div>
                     </div>
                     
                     <div class="service-col">
                         <h3>Human Audit</h3>
                         <p>Use this clean text file to quickly scan a site's content structure without touching code.</p>
                         <textarea id="humanOutput" readonly class="app-textarea"></textarea>
-                        <button onclick="downloadFile('txt')" class="footer-cta" style="width: 100%;">Download .txt <span class="arrow">↓</span></button>
+                        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+                            <button onclick="downloadFile('txt')" class="footer-cta" style="width: 100%; justify-content: center;">Download .txt <span class="arrow">↓</span></button>
+                            <a href="https://buymeacoffee.com/alfredlor" target="_blank" rel="noopener" class="btn-outline">Support the project</a>
+                        </div>
                     </div>
                     
                     <div class="service-col">
                         <h3>Raw Tags (md)</h3>
                         <p>Paste into ChatGPT to evaluate heading hierarchies, links, and alt-text.</p>
                         <textarea id="markdownOutput" readonly class="app-textarea"></textarea>
-                        <button onclick="downloadFile('md')" class="footer-cta" style="width: 100%;">Download .md <span class="arrow">↓</span></button>
+                        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+                            <button onclick="downloadFile('md')" class="footer-cta" style="width: 100%; justify-content: center;">Download .md <span class="arrow">↓</span></button>
+                            <a href="https://buymeacoffee.com/alfredlor" target="_blank" rel="noopener" class="btn-outline">Support the project</a>
+                        </div>
                     </div>
+
                 </div>
             </section>
             <span class="row-divider" role="separator" aria-hidden="true"></span>
@@ -390,8 +445,8 @@
                 <p class="footer-list-label">Contact & Projects</p>
                 <ul class="footer-list">
                     <li><a href="mailto:studio.11h21@gmail.com">studio.11h21@gmail.com</a></li>
-                    <li><a href="https://11h21.studio" target="_blank">11h21.studio</a></li>
-                    <li><a href="https://www.11h21.com" target="_blank">11h21.com</a></li>
+                    <li><a href="https://11h21.studio" target="_blank" rel="noopener">11h21.studio</a></li>
+                    <li><a href="https://www.11h21.com" target="_blank" rel="noopener">11h21.com</a></li>
                 </ul>
             </div>
         </div>
@@ -450,6 +505,24 @@
 
         document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
         document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
+
+        // ── Navigation Toggle ──
+        const hamburger   = document.getElementById('hamburger');
+        const menuOverlay = document.getElementById('menuOverlay');
+        hamburger.addEventListener('click', () => {
+          const open = hamburger.classList.toggle('open');
+          menuOverlay.classList.toggle('open', open);
+          hamburger.setAttribute('aria-expanded', open);
+          menuOverlay.setAttribute('aria-hidden', !open);
+          document.body.style.overflow = open ? 'hidden' : '';
+        });
+        menuOverlay.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+          hamburger.classList.remove('open');
+          menuOverlay.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', false);
+          menuOverlay.setAttribute('aria-hidden', true);
+          document.body.style.overflow = '';
+        }));
 
         // ── App Logic ──
         const API_BASE_URL = "https://llmerick-engine.onrender.com/api/scrape";
